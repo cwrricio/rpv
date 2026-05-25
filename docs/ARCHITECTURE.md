@@ -1,135 +1,161 @@
-# ARCHITECTURE — Poshboard
+# Arquitetura — Poshboard
 
-Visão geral da arquitetura do sistema, decisões de design e variáveis de ambiente relevantes.
+Objetivo: hospedar **front** e **back** de forma correta e preparar o backend em Python para **API** + **jobs agendados** (cron) para ingest/scraping (ex.: Lattes).
 
----
-
-## Visão Geral
-
-```
-┌──────────────────────────────────────────────────────┐
-│                      Frontend                        │
-│         React (Vite) · apresentacao/                 │
-│         Serve via Firebase Hosting                   │
-└────────────────────┬─────────────────────────────────┘
-                     │ HTTP (VITE_API_URL)
-┌────────────────────▼─────────────────────────────────┐
-│                      Backend                         │
-│         FastAPI (Python) · functions/main.py         │
-│         Roda via Uvicorn (local) ou Cloud Run        │
-└────────────────────┬─────────────────────────────────┘
-                     │ Firebase Admin SDK
-┌────────────────────▼─────────────────────────────────┐
-│              Firebase Realtime Database               │
-│         (poshbard-default-rtdb.firebaseio.com)       │
-└──────────────────────────────────────────────────────┘
-```
+> Decisões arquiteturais formalizadas em `docs/adr/`. Consulte os ADRs antes de propor mudanças estruturais.
 
 ---
 
-## Backend — FastAPI
+## Visão geral
 
-### Estrutura de pastas
+- **Frontend:** React + Vite em `apresentacao/`, hospedado no Firebase Hosting.
+- **Backend:** FastAPI em Python, entrypoint em `functions/main.py`.
+- **Banco:** Firestore *(migração prevista — hoje ainda RTDB; ver ADR 0001)*.
+- **Auth:** Firebase Authentication no frontend; backend verifica o ID Token (JWT) nas rotas protegidas.
+- **Jobs/cron:** Cloud Run Jobs disparados pelo Cloud Scheduler, lendo e gravando no banco.
+
+---
+
+## Hospedagem
+
+| Componente | Serviço | Motivo |
+|---|---|---|
+| Frontend | Firebase Hosting | Deploy estático simples via `firebase deploy` |
+| Backend API | Cloud Run (container Uvicorn) | FastAPI exige processo contínuo — incompatível com Firebase Functions (ver ADR 0003) |
+| Jobs/cron | Cloud Run Jobs + Cloud Scheduler | Execução agendada fora do HTTP |
+
+---
+
+## Estrutura de pastas
 
 ```
 functions/
-  main.py               # Entry point: app FastAPI, middlewares, routers
-  api_routes/           # Endpoints REST organizados por domínio
-  ingest/               # Integrações externas (OpenAlex, ORCID, CrossRef…)
-  crud/                 # Operações de leitura/escrita no RTDB
-  domain/               # Tipos e modelos de domínio
-  services/             # Lógica de negócio reutilizável
-  workers/              # Processamento assíncrono / batch
+├── main.py              ← entrypoint FastAPI: middleware, registro de routers
+├── api_routes/          ← [Interface HTTP] handlers de rota; sem lógica de negócio
+├── jobs/                ← [Interface Cron] entrypoints executáveis via Cloud Run Job
+├── services/            ← [Aplicação] orquestração e lógica de negócio
+├── workers/             ← [Aplicação] processamento em lote (ex.: pipeline raw→canonical)
+├── domain/              ← [Domínio] tipos, enums e regras (TipoDocente, StatusPesquisa)
+├── repositories/        ← [Infraestrutura] acesso ao banco (Firestore/RTDB); BaseCRUD aqui
+├── ingest/              ← [Infraestrutura] clientes HTTP externos (OpenAlex, ORCID, Crossref, S2)
+└── common/              ← utilitários compartilhados (ex.: dbref.py — único ponto de init do banco)
+
 config/
-  firebase_admin_init.py  # Inicialização única do Firebase Admin SDK
-  settings.py             # Leitura de variáveis de ambiente via Pydantic
+├── firebase_admin_init.py   ← inicialização única do Firebase Admin SDK
+└── settings.py              ← variáveis de ambiente centralizadas
 ```
+
+> **Nota de nomenclatura:** a pasta era `crud/` (renomeada para `repositories/`) e `commom/` com typo (corrigida para `common/`). Ver ADR 0002.
 
 ---
 
-## Variáveis de Ambiente
-
-Todas as variáveis são carregadas de um arquivo `.env` na raiz (via `python-dotenv`).  
-**Nunca commitar o `.env` ou qualquer arquivo de credenciais.**
-
-### Backend
-
-| Variável | Obrigatório | Padrão | Descrição |
-|---|---|---|---|
-| `PROJECT_ID` | ✅ | — | ID do projeto Firebase (ex.: `poshbard`) |
-| `RTDB_URL` | ✅ | — | URL do Realtime Database |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Recomendado | ADC do ambiente | Caminho para o JSON de service account |
-| `API_PORT` | Não | `8000` | Porta em que o Uvicorn sobe |
-| `OPENALEX_MAILTO` | Não | — | E-mail para o polite pool do OpenAlex |
-| `CORS_ORIGINS` | Não¹ | origens localhost | Origens CORS separadas por vírgula |
-
-¹ Em **produção** é obrigatório definir `CORS_ORIGINS` explicitamente.
-
-### CORS — detalhes
-
-A variável `CORS_ORIGINS` controla quais origens o backend aceita via header `Access-Control-Allow-Origin`.
+## Camadas e regra de dependência
 
 ```
-# .env (exemplo)
-CORS_ORIGINS=http://localhost:5173,https://meu-app.web.app,https://meu-dominio.com
+[Interface]     api_routes/ + jobs/
+                      ↓
+[Aplicação]     services/ + workers/
+                      ↓
+[Domínio]       domain/
+                      ↓
+[Infra]         repositories/ + ingest/ + config/
 ```
 
-- Cada origem deve ser uma URL completa (scheme + host + porta se não-padrão).
-- Se a variável estiver vazia ou ausente, o backend usa uma lista padrão de origens `localhost` para desenvolvimento.
-- **Nunca** configure `allow_origins=["*"]` junto com `allow_credentials=True` — isso viola a especificação CORS e é rejeitado pelos browsers.
-
-### Frontend (Vite)
-
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `VITE_API_URL` | `http://127.0.0.1:8000` | URL base do backend |
-| `VITE_RTDB_URL` | — | Fallback para leitura direta do RTDB |
+**Regra:** cada camada só conhece a camada imediatamente abaixo. `api_routes` chama `services`, que chama `repositories` ou `ingest`. `api_routes` **nunca** acessa o banco diretamente.
 
 ---
 
-## Segurança — Credenciais
+## Modelo de dados: Raw e Canonical
 
-### Regras obrigatórias
+O sistema armazena dados externos em duas camadas (ver ADR 0004):
 
-1. **`service-account.json` nunca entra no repositório.** Está listado no `.gitignore`.
-2. Se um arquivo de credenciais foi commitado por engano, o procedimento é:
-   a. Remover do histórico com `git filter-repo` ou BFG Repo Cleaner.
-   b. **Rotacionar imediatamente** a service account no Firebase Console (criar nova chave, revogar a antiga).
-3. Em CI/CD (GitHub Actions), credenciais são injetadas via **Secrets** do repositório — nunca em texto claro no workflow.
-4. Em produção (Cloud Run / GCE), usar **Workload Identity Federation** ou variáveis de ambiente seguras — não montar arquivos JSON em imagens Docker.
+- **Raw:** dado exatamente como veio da API externa. Salvo em `/openalex/{id}/batches/`, `/external/{fonte}/{id}/`. Nunca alterado. Nunca lido pela interface.
+- **Canonical:** dado normalizado e unificado, pronto para consumo. Salvo em `/autores_flat/{slug}`, `/produtos/{id}`, etc.
+
+O pipeline é: `ingest/` coleta e salva raw → `workers/` processa e grava canonical → `api_routes/` serve canonical.
 
 ---
 
-## Deploy
-
-### Firebase Hosting (frontend)
+## Deploy do backend (Cloud Run)
 
 ```bash
-npm --prefix apresentacao run build
-firebase deploy --only hosting
+# build e push da imagem
+docker build -t poshboard-api .
+docker push gcr.io/<PROJECT_ID>/poshboard-api
+
+# execução no container
+uvicorn functions.main:app --host 0.0.0.0 --port $PORT
 ```
 
-### Backend (Cloud Run — exemplo)
+**Credenciais:**
+- Cloud Run: Service Account vinculada ao serviço via ADC. Nenhum JSON no container.
+- Local: `GOOGLE_APPLICATION_CREDENTIALS` apontando para o arquivo JSON de service account.
 
-```bash
-gcloud run deploy poshboard-api \
-  --source . \
-  --region southamerica-east1 \
-  --set-env-vars "PROJECT_ID=poshbard,RTDB_URL=https://poshbard-default-rtdb.firebaseio.com,CORS_ORIGINS=https://meu-app.web.app"
-```
+**Variáveis de ambiente obrigatórias:**
 
-> As credenciais do Firebase Admin SDK em Cloud Run devem ser fornecidas via Workload Identity ou variável `GOOGLE_APPLICATION_CREDENTIALS` apontando para um Secret Manager secret montado como volume.
-
----
-
-## Arquivos que NUNCA devem ser commitados
-
-| Arquivo / padrão | Motivo |
+| Variável | Descrição |
 |---|---|
-| `service-account.json` | Credenciais de produção do Firebase |
-| `*.firebase.json` (exceto `firebase.json`) | Pode conter tokens |
-| `.env`, `.env.local` | Segredos e configurações locais |
-| `*_BACKUP_*.json`, `*_BASE_*.json`, `*_LOCAL_*.json`, `*_REMOTE_*.json` | Artefatos de conflito de merge do git |
-| `*.orig` | Artefatos de merge |
+| `PROJECT_ID` | ID do projeto Firebase/GCP |
+| `RTDB_URL` | URL do Realtime Database *(temporário — removido após ADR 0001)* |
+| `CORS_ORIGINS` | Origens permitidas separadas por vírgula (ex.: `https://poshboard.web.app`) |
+| `OPENALEX_MAILTO` | E-mail para o polite pool da API OpenAlex (opcional, mas recomendado) |
 
-Todos os padrões acima estão declarados no `.gitignore` da raiz.
+> `CORS_ORIGINS` deve ser configurado no Cloud Run. Nunca hardcoded no código.
+
+---
+
+## Jobs agendados (Cloud Run Job + Cloud Scheduler)
+
+Job implementado: `functions/jobs/harvest_docentes.py`
+
+Fluxo:
+1. Lê `docentes` do banco.
+2. Para cada docente com `nome` (e opcionalmente `orcid`), coleta dados do OpenAlex.
+3. Salva raw via `ingest/`.
+4. Processa canonical via `workers/`.
+
+Variáveis de ambiente do job:
+
+| Variável | Descrição |
+|---|---|
+| `HARVEST_LIMIT` | Número máximo de docentes por execução |
+| `HARVEST_MAX_WORKS_PAGES` | Páginas máximas de obras por autor |
+| `HARVEST_SLEEP_S` | Intervalo entre requisições (rate limit) |
+
+Próximo adapter: `functions/ingest/lattes/` para coleta via Currículo Lattes.
+
+---
+
+## Handlers síncronos (dívida técnica conhecida)
+
+Todos os handlers são `def` síncronos, não `async def`. O FastAPI os executa em thread pool interno — correto, mas não ideal (ver ADR 0005).
+
+**Gatilho de resolução:** quando a migração para Firestore (ADR 0001) for executada, todos os handlers devem ser convertidos para `async def` usando o `AsyncClient` do Firestore.
+
+---
+
+## Diagramas
+
+O projeto tem o gerador `uml_packages.py`:
+
+```bash
+python uml_packages.py --root . --max-depth 4 --min-files 1
+```
+
+Gera:
+- `packages.puml` — pacotes e pastas
+- `components.puml` — componentes e dependências por imports
+
+---
+
+## Referências
+
+| Documento | Conteúdo |
+|---|---|
+| `CONTEXT.md` | Glossário de domínio |
+| `docs/adr/0001` | Firestore em vez de RTDB |
+| `docs/adr/0002` | Manutenção sem reengenharia |
+| `docs/adr/0003` | Cloud Run em vez de Firebase Functions |
+| `docs/adr/0004` | Modelo Raw e Canonical |
+| `docs/adr/0005` | Handlers síncronos como dívida técnica |
+| `docs/relatorio-refatoracao.md` | Análise completa de refatoração |

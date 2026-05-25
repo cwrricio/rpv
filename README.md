@@ -114,6 +114,32 @@ CORS_ORIGINS=http://localhost:5173,https://meu-projeto.web.app,https://meu-domin
 
 > ⚠️ Em produção, defina `CORS_ORIGINS` explicitamente com apenas as origens autorizadas — nunca use `*` com `allow_credentials=True`.
 
+## Testes (backend)
+
+A suíte de testes do backend vive em `tests/` e usa `pytest`.
+
+1. Instale as dependências de desenvolvimento (inclui `pytest` e `httpx`):
+
+	```bash
+	pip install -r requirements-dev.txt
+	```
+
+2. Rode a suíte a partir da raiz do projeto:
+
+	```bash
+	pytest
+	```
+
+Os testes unitários e de rota **não** acessam o Firebase (usam stubs/fakes em
+memória), então rodam sem credenciais nem rede. O teste de integração de
+`BaseCRUD` contra o **emulador Firebase** é pulado por padrão; para executá-lo:
+
+```bash
+firebase emulators:start --only database
+# em outro terminal, com a porta do emulador exposta pelo CLI:
+FIREBASE_DATABASE_EMULATOR_HOST=127.0.0.1:9000 pytest tests/test_base_crud.py
+```
+
 ## Rodar com Docker (opcional)
 
 O `Dockerfile` sobe o backend via Uvicorn na porta `8080` (ou `PORT`).

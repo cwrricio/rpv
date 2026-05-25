@@ -17,6 +17,8 @@ class DocenteCRUD(BaseCRUD):
         return super().create(data)
 
     def find_by_orcid(self, orcid: str) -> List[Dict]:
-        node = self._node()
+        # BaseCRUD expõe self.ref(); o antigo self._node() não existia e
+        # quebrava em produção com AttributeError (dependência da Frente 2.3).
+        node = self.ref()
         snaps = node.order_by_child("orcid").equal_to(orcid).get() or {}
         return [{"id": k, **v} for k, v in snaps.items() if isinstance(v, dict)]

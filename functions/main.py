@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 import os
 import json
 from urllib.request import urlopen, Request
-from collections import Counter
 
 # 1) Carrega .env o mais cedo possível
 load_dotenv()
@@ -15,6 +14,9 @@ print("Firebase cred path:", os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
 # 2) Inicializa o Firebase uma única vez
 from config.firebase_admin_init import init_firebase
 init_firebase()
+
+# Camada de Aplicação: lógica de métricas extraída deste arquivo (Frente 4.1/4.2)
+from functions.services.analytics import compute_author_metrics
 
 # 3) Cria a app UMA vez
 app = FastAPI(title="PosGrad Board (Python + RTDB)")
@@ -98,104 +100,20 @@ def autores_flat_item(author_id: str):
 @app.get("/autores/{author_id}/metrics", summary="Agrega métricas a partir de autores_flat.{id}.works")
 def author_metrics(author_id: str):
     """
-    Agrega métricas simples a partir do nó autores_flat/<id>/works:
-    - publications_count, total_citations, h_index, first_year, last_year
+    Agrega métricas a partir do nó autores_flat/<id>/works:
+    - publications_count, total_citations, h_index, h5_index, i10_index
+    - first_year, last_year
     - top_concepts (lista [concept, count]) e top_coauthors (lista [name,count])
     - sample_publications (até 10 itens)
+
+    A regra de negócio vive em services/analytics.compute_author_metrics();
+    o handler apenas lê o nó do banco e trata o 404.
     """
     try:
         node = _rtdb_get(f"autores_flat/{author_id}")
         if not node:
             raise HTTPException(status_code=404, detail="Autor não encontrado")
-        works = node.get("works") or node.get("work") or {}
-        # normalize map -> list
-        if isinstance(works, dict):
-            items = [{**v, "id": k} for k, v in works.items() if k != "_"]
-        elif isinstance(works, list):
-            items = works
-        else:
-            items = []
-
-        publications_count = len(items)
-        citations_list = []
-        years = []
-        concepts_counter = Counter()
-        coauthors_counter = Counter()
-        sample = []
-
-        for w in items:
-            # citations
-            cited = w.get("cited_by_count") or w.get("citations") or w.get("cited_by") or 0
-            try:
-                cited = int(cited)
-            except Exception:
-                cited = 0
-            citations_list.append(cited)
-            # year
-            y = w.get("year") or w.get("ano") or w.get("published_year") or None
-            try:
-                if y is not None:
-                    years.append(int(y))
-            except Exception:
-                pass
-            # concepts
-            for c in (w.get("concepts") or w.get("topics") or []):
-                # c may be dict with 'display_name' or string
-                if isinstance(c, dict):
-                    name = c.get("display_name") or c.get("wikidata") or None
-                    if name:
-                        concepts_counter[name] += 1
-                elif isinstance(c, str):
-                    concepts_counter[c] += 1
-            # coauthors (authorships or authors list)
-            auths = w.get("authorships") or w.get("authors") or w.get("autores") or []
-            if isinstance(auths, list):
-                for a in auths:
-                    if isinstance(a, dict):
-                        n = a.get("author", {}).get("display_name") or a.get("name") or a.get("display_name")
-                        if n:
-                            coauthors_counter[n] += 1
-                    elif isinstance(a, str):
-                        coauthors_counter[a] += 1
-            # sample
-            if len(sample) < 10:
-                sample.append({
-                    "id": w.get("id") or w.get("work_id") or None,
-                    "title": w.get("title") or w.get("titulo") or w.get("name") or "",
-                    "year": w.get("year") or w.get("ano") or None,
-                    "doi": w.get("doi") or w.get("DOI") or None,
-                    "cited_by_count": cited
-                })
-
-        # total citations and h-index
-        total_citations = sum(citations_list)
-        sorted_cits = sorted(citations_list, reverse=True)
-        h_index = 0
-        for i, c in enumerate(sorted_cits, start=1):
-            if c >= i:
-                h_index = i
-            else:
-                break
-
-        first_year = min(years) if years else None
-        last_year = max(years) if years else None
-
-        top_concepts = concepts_counter.most_common(10)
-        top_coauthors = coauthors_counter.most_common(10)
-
-        return {
-            "author_id": author_id,
-            "name": node.get("nome") or node.get("name") or node.get("display_name"),
-            "publications_count": publications_count,
-            "total_citations": total_citations,
-            "h_index": h_index,
-            "first_year": first_year,
-            "last_year": last_year,
-            "top_concepts": top_concepts,
-            "top_coauthors": top_coauthors,
-            "sample_publications": sample,
-        }
-
+        return compute_author_metrics(author_id, node)
     except HTTPException:
         raise
     except Exception as e:
