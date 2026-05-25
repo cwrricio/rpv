@@ -96,6 +96,24 @@ Importante:
 
 - Trate JSON de service account como **segredo**. Não commite e não embuta em imagens Docker.
 
+
+## Variáveis de Ambiente — CORS
+
+A lista de origens permitidas pelo backend é configurada via variável de ambiente:
+
+| Variável | Obrigatório | Exemplo | Descrição |
+|---|---|---|---|
+| `CORS_ORIGINS` | Não | `http://localhost:5173,https://meu-app.web.app` | Origens CORS separadas por vírgula |
+
+Se `CORS_ORIGINS` não for definida, o backend aceita apenas as origens locais de desenvolvimento (`localhost:5173`, `localhost:3000`, `localhost:8000`).
+
+**Exemplo no `.env`:**
+```
+CORS_ORIGINS=http://localhost:5173,https://meu-projeto.web.app,https://meu-dominio.com
+```
+
+> ⚠️ Em produção, defina `CORS_ORIGINS` explicitamente com apenas as origens autorizadas — nunca use `*` com `allow_credentials=True`.
+
 ## Rodar com Docker (opcional)
 
 O `Dockerfile` sobe o backend via Uvicorn na porta `8080` (ou `PORT`).

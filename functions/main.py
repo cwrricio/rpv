@@ -19,17 +19,29 @@ init_firebase()
 # 3) Cria a app UMA vez
 app = FastAPI(title="PosGrad Board (Python + RTDB)")
 
-# Habilita CORS para o frontend de desenvolvimento (Vite) e origens comuns
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# ---------------------------------------------------------------------------
+# CORS — origens configuradas via variável de ambiente CORS_ORIGINS
+# Defina no .env (separadas por vírgula), ex.:
+#   CORS_ORIGINS=http://localhost:5173,https://meu-app.web.app
+# Se a variável não estiver definida, usa apenas o localhost de desenvolvimento.
+# ---------------------------------------------------------------------------
+_raw_origins = os.getenv("CORS_ORIGINS", "")
+if _raw_origins.strip():
+    allow_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+else:
+    # Fallback seguro para desenvolvimento local
+    allow_origins = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
-    ],
+    ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -216,9 +228,6 @@ from functions.ingest.semanticscholar_api import router as s2_router
 from functions.api_routes.autores_merge import router as autores_merge_router
 from functions.api_routes.harvest_authors import router as harvest_authors_router
 from functions.api_routes.autores_flat import router as autores_flat_router
-
-
-
 
 
 # OBS: nos módulos *não* use prefix= no APIRouter; deixe só @router.get("/") etc.
