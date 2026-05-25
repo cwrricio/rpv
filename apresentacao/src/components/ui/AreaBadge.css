@@ -1,0 +1,28 @@
+.area-badges-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.area-badge {
+  display: inline-block;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  background-color: #e6e6fa;
+  color: #483d8b;
+  border: 1px solid #b0c4de;
+  white-space: nowrap;
+}
+
+.area-none {
+  background-color: #f0f0f0;
+  color: #777;
+  border-color: #ddd;
+}
+
+.area-more {
+  background-color: #f0f0f0;
+  color: #555;
+  font-weight: bold;
+}

@@ -1,0 +1,12 @@
+@startuml
+title Componentes por pasta-raiz — raiz: poshboard
+skinparam componentStyle rectangle
+component "apresentacao" as apresentacao
+component "config" as config
+component "Funções Serverless\n(functions)" as functions
+component "Scripts\n(scripts)" as scripts
+component "secrets" as secrets
+functions --> config
+apresentacao --> functions
+rectangle "Camada de Serviços" { functions }
+@enduml

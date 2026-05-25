@@ -1,0 +1,235 @@
+.reports-page {
+  /* permitir usar largura total da janela */
+  max-width: none;
+  width: 100%;
+  padding: 24px 32px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-x: hidden;
+}
+.reports-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+.reports-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: var(--text);
+}
+.reports-controls {
+  display: grid;
+  grid-template-columns: 1fr 340px; /* keep select area and the right controls aligned with list */
+  gap: 12px;
+  align-items: start;
+}
+.reports-controls .select-wrap {
+  flex: 1;
+}
+.reports-controls select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--input-border);
+  background: #fff
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path fill='%23db8b24' d='M7 9L0 0h14z'/></svg>")
+    no-repeat calc(100% - 12px) center;
+  background-size: 14px 9px;
+  box-shadow: 0 6px 18px rgba(20, 30, 60, 0.06);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  box-sizing: border-box;
+  font-size: 0.95rem;
+}
+.reports-grid {
+  display: grid;
+  /* deixa a área principal muito mais larga que a sidebar à direita */
+  grid-template-columns: 1fr 360px; /* gráfico ocupa a maior parte, ranking à direita */
+  gap: 20px;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+}
+.reports-card {
+  padding: 20px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+  box-sizing: border-box;
+}
+.chart-total {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.chart-center {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding-top: 0px; /* reduzido para aproximar o gráfico do título */
+  gap: 8px;
+  flex-direction: column;
+  align-items: stretch; /* allow charts to expand full width */
+  justify-content: flex-start;
+}
+/* permitir que filhos flex encolham sem causar overflow horizontal */
+.chart-center > div,
+.chart-center aside {
+  min-width: 0;
+}
+
+/* segurança extra: prevenir scroll horizontal indesejado */
+.reports-page {
+  overflow-x: hidden;
+}
+
+/* ensure SVG charts take full width of their container */
+.chart-center svg,
+.reports-card svg {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  display: block;
+}
+
+/* wrapper for charts to allow absolute tooltip */
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.chart-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(15, 23, 42, 0.95);
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.2);
+  transform: translate(-50%, -110%);
+  white-space: nowrap;
+  z-index: 50;
+}
+
+.reports-card.metrics {
+  position: sticky;
+  top: 16px;
+}
+.reports-legend {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+.reports-legend .reports-legend-item {
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.legend-name {
+  color: var(--text);
+  font-weight: 600;
+}
+.legend-count {
+  color: var(--muted);
+  margin-left: 6px;
+  font-weight: 400;
+}
+.reports-legend {
+  align-items: stretch;
+}
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.medal.small {
+  background: transparent;
+  font-size: 14px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* medalha: somente o emoji, sem fundo colorido */
+.medal {
+  background: transparent;
+  box-shadow: none;
+}
+.reports-list-item {
+  margin-bottom: 8px;
+}
+.reports-chart-title,
+.reports-list-title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+.reports-legend {
+  margin-top: 12px;
+}
+
+.reports-controls select:focus,
+.reports-controls select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 6px rgba(219, 139, 36, 0.08); /* close to var(--accent-hover) */
+  border-color: var(--accent-hover);
+}
+.reports-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+.reports-list ol {
+  padding-left: 18px;
+}
+
+/* garantir que o pie ocupe a largura disponível e escale sem criar scroll */
+.pie-wrapper {
+  width: 100%;
+  height: 360px; /* ajuste se quiser mais/menos altura */
+  min-width: 0; /* importante para encolher em flex/grid */
+  display: block;
+}
+
+/* SVG dentro do wrapper deve ocupar 100% do espaço */
+.pie-wrapper svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* evitar overflow horizontal */
+.reports-page {
+  overflow-x: hidden;
+}
+
+/* responsivo: em telas pequenas empilha colunas */
+@media (max-width: 960px) {
+  .reports-grid {
+    grid-template-columns: 1fr; /* empilha */
+  }
+  .side-card {
+    order: 2;
+  }
+  .main-card {
+    order: 1;
+  }
+}

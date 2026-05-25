@@ -1,0 +1,6 @@
+@import "./Teacher.css";
+
+/* pequenas adaptações visuais específicas para Produção (reusa Teacher.css) */
+.teacher-page {
+  max-width: 1100px;
+}

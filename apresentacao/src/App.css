@@ -1,0 +1,62 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+:root {
+  /* Theme variables */
+  --accent: #db8b24;
+  --accent-hover: #e5a660;
+  --accent-contrast: #ffffff;
+  --muted: #6b7280;
+  --text: #213547;
+  --bg: #ffffff;
+  --input-border: #dde6f6;
+  --card-border: #eef2ff;
+  --sidebar-width: 220px;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 1.6em var(--accent) aa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 1.6em var(--accent) 66);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+.read-the-docs {
+  color: #666;
+}
+
+/* Accent color is defined in :root */
+
+h2,
+h3,
+h4 {
+  color: #0f172a;
+}

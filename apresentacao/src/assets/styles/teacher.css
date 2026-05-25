@@ -1,0 +1,229 @@
+/* Layout principal */
+.teacher-page {
+  max-width: 1100px;
+  margin: 0;
+  padding: 0 1.25rem 4rem 1.25rem;
+}
+
+/* Header */
+.teacher-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+.teacher-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: #213547;
+}
+
+/* Form */
+.teacher-form {
+  max-width: 1000px;
+  margin: 0 auto; /* centraliza o card do form */
+  padding: 1.5rem;
+  background: #ffffff;
+  border: 1px solid #eef2ff;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(20, 30, 60, 0.06);
+}
+
+.form-row {
+  margin-bottom: 1rem;
+}
+.form-row label {
+  display: block;
+  font-size: 0.9rem;
+  color: #334a5e;
+  margin-bottom: 0.45rem;
+}
+.form-row input,
+.form-row select,
+.form-row textarea {
+  width: 100%;
+  padding: 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #dde6f6;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+/* multi-select styling */
+.form-row select[multiple] {
+  height: auto;
+  min-height: 5rem;
+}
+
+/* grid for numeric fields */
+.form-row-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+/* Research checkboxes */
+.checkbox-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #ffffff;
+  border: 1px solid #eef2ff;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+/* Lista de docentes */
+.teacher-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+.teacher-card {
+  display: flex;
+  gap: 1rem;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  border: 1px solid #eef4ff;
+  padding: 1rem;
+  border-radius: 12px;
+  align-items: center;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.teacher-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(20, 30, 60, 0.06);
+}
+
+.card-left .avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6b7bff, #8fb4ff);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.card-title {
+  font-weight: 700;
+  color: #0f2b36;
+  font-size: 1.05rem;
+}
+
+.badges {
+  margin-top: 0.45rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.badge {
+  background: #f0f4ff;
+  color: #334a80;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+
+.meta {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #4b616e;
+}
+.meta a {
+  color: #4b6bff;
+  text-decoration: none;
+  font-weight: 600;
+}
+.meta a:hover {
+  text-decoration: underline;
+}
+
+/* buttons */
+.btn-primary {
+  background: #4b6bff;
+  border: none;
+  color: white;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.btn-primary:hover {
+  filter: brightness(0.98);
+}
+
+/* centralizar linhas de pesquisa */
+.research-row label {
+  text-align: center;
+  width: 100%;
+  display: block;
+}
+.research-row .checkbox-grid {
+  justify-content: center; /* centraliza os checkboxes */
+}
+
+/* grid de 3 colunas para Scholar / Instagram / LinkedIn */
+.form-row-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem; /* mais espaço entre eles */
+  margin-bottom: 1rem;
+}
+.form-row-grid-3 .small-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* centraliza cada campo dentro da coluna */
+}
+.form-row-grid-3 .small-field input {
+  max-width: 360px; /* reduz o tamanho dos inputs */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* grid de 2 colunas para índices H */
+.form-row-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem; /* mais espaço entre os índices */
+  justify-items: center; /* centraliza os campos */
+  margin-bottom: 1rem;
+}
+.form-row-grid-2 .small-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.form-row-grid-2 .small-field input {
+  max-width: 240px; /* campos menores para índices */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* mantém responsividade */
+@media (max-width: 900px) {
+  .form-row-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .form-row-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}

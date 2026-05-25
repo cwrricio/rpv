@@ -1,0 +1,65 @@
+.qualis-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85em;
+  text-align: center;
+  min-width: 40px;
+  line-height: 1.5;
+}
+
+.qualis-a1 {
+  background-color: #1a5fb4;
+  color: white;
+}
+
+.qualis-a2 {
+  background-color: #2a7de1;
+  color: white;
+}
+
+.qualis-a3 {
+  background-color: #3584e4;
+  color: white;
+}
+
+.qualis-a4 {
+  background-color: #63a0e9;
+  color: white;
+}
+
+.qualis-b1 {
+  background-color: #26a269;
+  color: white;
+}
+
+.qualis-b2 {
+  background-color: #33d17a;
+  color: black;
+}
+
+.qualis-b3 {
+  background-color: #8ff0a4;
+  color: black;
+}
+
+.qualis-b4 {
+  background-color: #c8f0d7;
+  color: black;
+}
+
+.qualis-c {
+  background-color: #ffbe6f;
+  color: black;
+}
+
+.qualis-none {
+  background-color: #e0e0e0;
+  color: #707070;
+}
+
+.qualis-other {
+  background-color: #c061cb;
+  color: white;
+}

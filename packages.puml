@@ -1,0 +1,63 @@
+@startuml
+title Pacotes do Sistema — raiz: poshboard
+skinparam packageStyle rectangle
+package "apresentacao" as apresentacao {
+  package "apresentacao/components" as apresentacao_components
+  package "apresentacao/pages" as apresentacao_pages
+  package "apresentacao/public" as apresentacao_public
+  package "apresentacao/schemas" as apresentacao_schemas
+  package "apresentacao/services" as apresentacao_services
+  package "apresentacao/src" as apresentacao_src
+}
+package "apresentacao/components" as apresentacao_components {
+}
+package "apresentacao/pages" as apresentacao_pages {
+}
+package "apresentacao/public" as apresentacao_public {
+}
+package "apresentacao/schemas" as apresentacao_schemas {
+}
+package "apresentacao/services" as apresentacao_services {
+}
+package "apresentacao/src" as apresentacao_src {
+  package "apresentacao/src/assets" as apresentacao_src_assets
+  package "apresentacao/src/components" as apresentacao_src_components
+  package "apresentacao/src/pages" as apresentacao_src_pages
+  package "apresentacao/src/services" as apresentacao_src_services
+}
+package "apresentacao/src/assets" as apresentacao_src_assets {
+}
+package "apresentacao/src/components" as apresentacao_src_components {
+}
+package "apresentacao/src/pages" as apresentacao_src_pages {
+}
+package "apresentacao/src/services" as apresentacao_src_services {
+}
+package "config" as config {
+}
+package "functions" as functions {
+  package "functions/commom" as functions_commom
+  package "functions/crud" as functions_crud
+  package "functions/domain" as functions_domain
+  package "functions/http" as functions_http
+  package "functions/ingest" as functions_ingest
+  package "functions/services" as functions_services
+  package "functions/workers" as functions_workers
+}
+package "functions/commom" as functions_commom {
+}
+package "functions/crud" as functions_crud {
+}
+package "functions/domain" as functions_domain {
+}
+package "functions/http" as functions_http {
+}
+package "functions/ingest" as functions_ingest {
+}
+package "functions/services" as functions_services {
+}
+package "functions/workers" as functions_workers {
+}
+package "scripts" as scripts {
+}
+@enduml
