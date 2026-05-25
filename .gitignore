@@ -69,3 +69,5 @@ node_modules/
 .dataconnect
 service-account.json
 poshbard-firebase.json
+service-account.json
+poshbard-firebase.json
