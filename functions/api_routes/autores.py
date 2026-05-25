@@ -1,17 +1,15 @@
 # functions/http/autores.py
+from functools import lru_cache
+
 from fastapi import APIRouter, HTTPException, Depends
-from typing import Optional
 from functions.crud.autor_crud import AutorCRUD
 from functions.crud.produto_crud import ProdutoCRUD
 
 router = APIRouter(tags=["Autores"])  # prefix definido no main.py
 
-_crud: Optional[AutorCRUD] = None
+@lru_cache
 def crud() -> AutorCRUD:
-    global _crud
-    if _crud is None:
-        _crud = AutorCRUD()
-    return _crud
+    return AutorCRUD()
 
 @router.get("/", summary="Listar autores")
 def listar(svc: AutorCRUD = Depends(crud)):

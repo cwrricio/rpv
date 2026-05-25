@@ -81,7 +81,6 @@ def autores_flat():
         data = _rtdb_get("autores_flat")
         return data or {}
     except Exception as e:
-        from fastapi import HTTPException
         raise HTTPException(status_code=502, detail=f"RTDB error: {e}")
 
 @app.get("/autores_flat/{author_id}", summary="RTDB proxy: autor (autores_flat/{id})")
@@ -89,13 +88,11 @@ def autores_flat_item(author_id: str):
     try:
         data = _rtdb_get(f"autores_flat/{author_id}")
         if data is None:
-            from fastapi import HTTPException
             raise HTTPException(status_code=404, detail="Autor não encontrado")
         return data
     except HTTPException:
         raise
     except Exception as e:
-        from fastapi import HTTPException
         raise HTTPException(status_code=502, detail=f"RTDB error: {e}")
 
 @app.get("/autores/{author_id}/metrics", summary="Agrega métricas a partir de autores_flat.{id}.works")
@@ -109,7 +106,6 @@ def author_metrics(author_id: str):
     try:
         node = _rtdb_get(f"autores_flat/{author_id}")
         if not node:
-            from fastapi import HTTPException
             raise HTTPException(status_code=404, detail="Autor não encontrado")
         works = node.get("works") or node.get("work") or {}
         # normalize map -> list
@@ -203,7 +199,6 @@ def author_metrics(author_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        from fastapi import HTTPException
         raise HTTPException(status_code=502, detail=f"RTDB error: {e}")
 
 # 5) Importa e registra todos os routers (prefixos apenas aqui!)
