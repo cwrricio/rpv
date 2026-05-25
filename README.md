@@ -18,6 +18,10 @@ O projeto tem duas partes:
 
 ### 1) Backend (FastAPI)
 
+> As instruções abaixo usam **bash** (Linux/macOS). No Windows, veja a subseção **Windows** (PowerShell/CMD) ou use os scripts em `scripts/windows/` para rodar de forma mais automática.
+
+#### Linux/macOS (bash)
+
 1. Crie/ative um virtualenv e instale dependências:
 
 	```bash
@@ -25,6 +29,48 @@ O projeto tem duas partes:
 	source venv/bin/activate
 	pip install -r requirements.txt
 	```
+
+#### Windows (PowerShell)
+
+1. Crie o virtualenv e instale dependências (sem depender de `pip` global):
+
+	```powershell
+	# se o comando `py` não existir, use `python` no lugar
+	py -m venv venv
+	.\venv\Scripts\python.exe -m pip install -r requirements.txt
+	```
+
+2. (Opcional) Ative o virtualenv na sessão atual (útil para rodar `pytest`, etc.):
+
+	```powershell
+	# se sua máquina bloquear scripts, rode antes:
+	# Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+	.\venv\Scripts\Activate.ps1
+	```
+
+#### Windows (CMD)
+
+1. Crie o virtualenv e instale dependências:
+
+	```bat
+	REM se o comando `py` não existir, use `python` no lugar
+	py -m venv venv
+	venv\Scripts\python -m pip install -r requirements.txt
+	```
+
+2. (Opcional) Ative o virtualenv na sessão atual:
+
+	```bat
+	venv\Scripts\activate.bat
+	```
+
+#### Windows (automatizado)
+
+Se você quiser evitar a etapa de ativação do virtualenv, rode o backend via script (ele cria o venv se necessário, instala dependências e inicia o Uvicorn):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\windows\backend.ps1 -Port 8000
+```
 
 2. Configure variáveis de ambiente criando/ajustando um arquivo `.env` na raiz.
 
@@ -42,6 +88,12 @@ O projeto tem duas partes:
 
 	```bash
 	uvicorn functions.main:app --reload --host 127.0.0.1 --port ${API_PORT:-8000}
+	```
+
+	No Windows (PowerShell/CMD), prefira informar a porta diretamente:
+
+	```powershell
+	uvicorn functions.main:app --reload --host 127.0.0.1 --port 8000
 	```
 
 4. Verifique:
@@ -67,6 +119,12 @@ O projeto tem duas partes:
 
 	```bash
 	npm run dev
+	```
+
+	Windows (automatizado):
+
+	```powershell
+	powershell -ExecutionPolicy Bypass -File .\scripts\windows\frontend.ps1
 	```
 
 4. Abra:
@@ -139,6 +197,21 @@ firebase emulators:start --only database
 # em outro terminal, com a porta do emulador exposta pelo CLI:
 FIREBASE_DATABASE_EMULATOR_HOST=127.0.0.1:9000 pytest tests/test_base_crud.py
 ```
+
+No Windows:
+
+- PowerShell:
+
+	```powershell
+	$env:FIREBASE_DATABASE_EMULATOR_HOST = "127.0.0.1:9000"
+	pytest tests\test_base_crud.py
+	```
+
+- CMD:
+
+	```bat
+	set FIREBASE_DATABASE_EMULATOR_HOST=127.0.0.1:9000 && pytest tests\test_base_crud.py
+	```
 
 ## Rodar com Docker (opcional)
 
