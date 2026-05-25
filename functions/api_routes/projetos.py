@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-from functions.crud.projeto_crud import ProjetoCRUD
+from functions.repositories.projeto_crud import ProjetoCRUD
 
 router = APIRouter(tags=["Projetos"])
 

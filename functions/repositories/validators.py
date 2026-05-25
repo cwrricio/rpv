@@ -1,4 +1,4 @@
-# functions/crud/validators.py
+# functions/repositories/validators.py
 import re
 
 ISSN_RE = re.compile(r"^\d{4}-\d{3}[\dxX]$")

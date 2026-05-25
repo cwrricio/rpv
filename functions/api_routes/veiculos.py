@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-from functions.crud.veiculo_crud import VeiculoCRUD
+from functions.repositories.veiculo_crud import VeiculoCRUD
 
 router = APIRouter(tags=["Veículos"])
 

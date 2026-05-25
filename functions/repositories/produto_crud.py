@@ -1,7 +1,7 @@
-# functions/crud/produto_crud.py
+# functions/repositories/produto_crud.py
 from typing import Dict
-from functions.crud.base import BaseCRUD
-from functions.crud.validators import validate_doi, normalize_doi_url
+from functions.repositories.base import BaseCRUD
+from functions.repositories.validators import validate_doi, normalize_doi_url
 
 SUBTIPOS_BIB = {"ARTIGO", "CAPITULO", "ANAIS", "LIVRO"}
 

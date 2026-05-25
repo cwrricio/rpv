@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-from functions.crud.docente_crud import DocenteCRUD
+from functions.repositories.docente_crud import DocenteCRUD
 
 router = APIRouter(tags=["Docentes"])
 

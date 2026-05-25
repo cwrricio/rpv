@@ -1,15 +1,10 @@
-# functions/http/autores_links.py
+# functions/api_routes/autores_links.py
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Any, List, Tuple
 import unicodedata, re
+from functions.common.dbref import ref
 
 router = APIRouter(tags=["Autores ↔ Docentes"])  # prefix no main.py
-
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
 
 # --- utilidades ---
 def _norm(s: str) -> str:
@@ -26,8 +21,7 @@ def _only_orcid_tail(v: str | None) -> str | None:
 
 # --- load data ---
 def _load_docentes() -> List[Dict[str, Any]]:
-    db = _db()
-    raw = db.reference("docentes").get() or {}
+    raw = ref("docentes").get() or {}
     out = []
     for k, v in (raw.items() if isinstance(raw, dict) else []):
         if not isinstance(v, dict): continue
@@ -40,8 +34,7 @@ def _load_docentes() -> List[Dict[str, Any]]:
     return out
 
 def _load_autores() -> List[Dict[str, Any]]:
-    db = _db()
-    raw = db.reference("autores").get() or {}
+    raw = ref("autores").get() or {}
     out = []
     for k, v in (raw.items() if isinstance(raw, dict) else []):
         if not isinstance(v, dict): continue
@@ -84,7 +77,6 @@ def list_unlinked():
 
 @router.post("/autores/_reconcile_all", summary="Tentar vincular todos os autores a docentes")
 def reconcile_all():
-    db = _db()
     docentes = _load_docentes()
     autores = _load_autores()
     linked, skipped = [], []
@@ -95,7 +87,7 @@ def reconcile_all():
             continue
         docente_id, meta = _match_autor_to_docente(a, docentes)
         if docente_id:
-            db.reference("autores").child(a["id"]).update({
+            ref("autores").child(a["id"]).update({
                 "docente_id": docente_id,
                 "match": meta
             })
@@ -107,12 +99,11 @@ def reconcile_all():
 
 @router.post("/autores/{autor_id}/link_to_docente/{docente_id}", summary="Forçar vínculo autor → docente")
 def force_link(autor_id: str, docente_id: str):
-    db = _db()
-    if not db.reference("autores").child(autor_id).get():
+    if not ref("autores").child(autor_id).get():
         raise HTTPException(404, "Autor não encontrado")
-    if not db.reference("docentes").child(docente_id).get():
+    if not ref("docentes").child(docente_id).get():
         raise HTTPException(404, "Docente não encontrado")
-    db.reference("autores").child(autor_id).update({
+    ref("autores").child(autor_id).update({
         "docente_id": docente_id,
         "match": {"method": "manual", "score": 1.0}
     })

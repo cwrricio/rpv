@@ -2,12 +2,10 @@
 import time
 from .openalex_mapper import map_work_to_prod
 from .upsert import upsert_produto_bibliografico
+from functions.common.dbref import ref
 
 def _staging():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db.reference("staging/import_batches")
+    return ref("staging/import_batches")
 
 def process_batch(batch_id: str) -> dict:
     items = _staging().child(batch_id).child("items").get() or {}

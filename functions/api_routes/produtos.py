@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-from functions.crud.produto_crud import ProdutoCRUD
+from functions.common.dbref import ref
+from functions.repositories.produto_crud import ProdutoCRUD
 
 router = APIRouter(tags=["Produtos"])
 
@@ -27,10 +28,7 @@ def ranking(svc: ProdutoCRUD = Depends(crud)):
     """
     # Tenta usar o nó RTDB 'autores' quando presente (mais confiável: vincula produto_id <-> docente_id)
     try:
-        from config.firebase_admin_init import init_firebase
-        from firebase_admin import db
-        init_firebase()
-        autores_node = db.reference("autores").get() or {}
+        autores_node = ref("autores").get() or {}
         # contar por docente_id quando disponível
         counts_by_docente = {}
         for k, v in (autores_node or {}).items():
@@ -42,7 +40,7 @@ def ranking(svc: ProdutoCRUD = Depends(crud)):
 
         if counts_by_docente:
             # pegar nomes dos docentes para mapear
-            docentes_node = db.reference("docentes").get() or {}
+            docentes_node = ref("docentes").get() or {}
             out = []
             for did, cnt in counts_by_docente.items():
                 name = None

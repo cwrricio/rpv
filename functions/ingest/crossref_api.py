@@ -3,17 +3,12 @@ from typing import Dict, Any, List
 import requests, time
 
 from config.settings import settings
+from functions.common.dbref import ref
 
 router = APIRouter(prefix="/ingest/crossref", tags=["Crossref"])
 
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
-
 def _ref(p: str):
-    return _db().reference(p)
+    return ref(p)
 
 def _headers() -> Dict[str, str]:
     mailto = (settings.OPENALEX_MAILTO or "").strip()

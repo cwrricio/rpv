@@ -3,17 +3,12 @@ from typing import Dict, Any
 import requests, time
 
 from config.settings import settings
+from functions.common.dbref import ref
 
 router = APIRouter(prefix="/ingest/orcid", tags=["ORCID"])
 
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
-
 def _ref(path: str):
-    return _db().reference(path)
+    return ref(path)
 
 def _ua_headers() -> Dict[str, str]:
     mailto = (settings.OPENALEX_MAILTO or "").strip()

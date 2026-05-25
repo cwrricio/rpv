@@ -1,6 +1,6 @@
-# functions/crud/discente_crud.py
+# functions/repositories/discente_crud.py
 from typing import Dict
-from functions.crud.base import BaseCRUD
+from functions.repositories.base import BaseCRUD
 
 class DiscenteCRUD(BaseCRUD):
     def __init__(self):

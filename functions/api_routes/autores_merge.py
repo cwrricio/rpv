@@ -1,17 +1,12 @@
 from fastapi import APIRouter, HTTPException, Body
 from typing import Dict, Any, Optional, List
 import time
+from functions.common.dbref import ref
 
 router = APIRouter(prefix="/autores", tags=["Autores • Merge"])
 
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
-
 def _ref(p: str):
-    return _db().reference(p)
+    return ref(p)
 
 def _tail_orcid(v: Optional[str]) -> Optional[str]:
     if not v: return None

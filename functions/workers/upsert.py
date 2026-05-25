@@ -5,18 +5,13 @@ from .resolvers import (
     link_doi_to_produto,
     resolve_pessoa_by_orcid,
 )
+from functions.common.dbref import ref
 
 def _produtos():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db.reference("produtos")
+    return ref("produtos")
 
 def _autores():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db.reference("autores")
+    return ref("autores")
 
 def upsert_produto_bibliografico(m: dict) -> str:
     prod_id = None

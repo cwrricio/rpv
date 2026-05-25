@@ -1,19 +1,14 @@
-# functions/http/autores_generate.py
+# functions/api_routes/autores_generate.py
 from fastapi import APIRouter, HTTPException, Body
 from typing import Dict, Any, List, Optional, Tuple
 import unicodedata, re, time
+from functions.common.dbref import ref
 
 router = APIRouter(tags=["Autores • Gerar (OpenAlex)"])  # prefix no main.py
 
 # ---------- Firebase helpers ----------
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
-
 def _ref(path: str):
-    return _db().reference(path)
+    return ref(path)
 
 # ---------- utils ----------
 def _norm(s: str) -> str:

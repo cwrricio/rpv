@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-from functions.crud.linha_crud import LinhaCRUD
+from functions.repositories.linha_crud import LinhaCRUD
 
 router = APIRouter(tags=["Linhas de Pesquisa"])
 

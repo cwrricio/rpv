@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-from functions.crud.discente_crud import DiscenteCRUD
+from functions.repositories.discente_crud import DiscenteCRUD
 
 router = APIRouter(tags=["Discentes"])
 

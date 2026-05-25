@@ -1,13 +1,8 @@
-# functions/crud/base.py
+# functions/repositories/base.py
 from typing import Optional, Dict, Any
 from fastapi import HTTPException
 import traceback
-
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
+from functions.common.dbref import ref
 
 class BaseCRUD:
     # Defina nas subclasses: path_root = "nome_do_no"
@@ -21,7 +16,7 @@ class BaseCRUD:
 
     # referência raiz do nó
     def ref(self):
-        return _db().reference(self.path_root)
+        return ref(self.path_root)
 
     # --------- operações ---------
     def create(self, obj: Dict[str, Any]) -> Dict[str, Any]:
