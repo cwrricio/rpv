@@ -9,22 +9,17 @@ métricas para a camada de serviços e a criação da suíte de testes.
 
 ---
 
-## Contexto da branch (importante)
+## Contexto da branch (atualizado)
 
-Esta branch contém a **Frente 3** (schemas Pydantic, `lru_cache`,
-`response_model`, `services/produtos.py`), mas **não** contém a **Frente 2**
-(renomeações e correções). Consequências no código real desta branch:
+A Frente 4 foi implementada primeiro contra a estrutura que existia na branch
+(`functions/crud/`, `functions/commom/`). Em seguida — para alinhar a
+arquitetura à documentação — a **Frente 2 foi integrada via merge da
+`frente2-leo`**, passando a estrutura a `functions/repositories/` e
+`functions/common/`. O detalhamento desse merge está na seção
+**"Alinhamento da arquitetura com a documentação"** mais abaixo.
 
-| Doc da Frente 4 assume | Nesta branch ainda é |
-|---|---|
-| `functions/repositories/` | `functions/crud/` |
-| `functions/common/` | `functions/commom/` (com typo) |
-| bug `self._node()` já corrigido (Frente 2.3) | bug ainda presente — **corrigido aqui** (ver abaixo) |
-
-A implementação foi feita contra a estrutura **real** da branch. Quando a
-Frente 2 for mergeada, os caminhos `crud/` → `repositories/` e
-`commom/` → `common/` mudam, mas o conteúdo dos testes/serviço continua válido
-(só os imports acompanham a renomeação).
+Estado final desta branch: contém as **Frentes 1, 2, 3 e 4** — alinhada com
+`ARCHITECTURE.md` e os ADRs.
 
 ---
 
@@ -107,13 +102,17 @@ existe em `BaseCRUD` (só existe `self.ref()`) — o bug crítico descrito no
 relatório de refatoração e atribuído à Frente 2.3.
 
 Como sem a correção o teste 4.4 falharia (e a meta era "tudo funcionando"), a
-correção de **uma linha** foi aplicada aqui e está sinalizada no código como
-dependência da Frente 2.3:
+correção de **uma linha** foi aplicada primeiro em `functions/crud/docente_crud.py`:
 
 ```python
-# functions/crud/docente_crud.py
 node = self.ref()  # antes: self._node()  -> AttributeError em produção
 ```
+
+> Após o merge da Frente 2 (ver abaixo), a versão canônica passou a ser
+> `functions/repositories/docente_crud.py` — que já trazia essa mesma correção
+> (mais o uso do enum `TipoDocente`). O arquivo `crud/docente_crud.py` deixou de
+> existir; o teste 4.4 importa de `functions.repositories.docente_crud` e
+> continua verde.
 
 ---
 
@@ -194,6 +193,65 @@ coerente com a seção "Credenciais"/"Troubleshooting". As lacunas do README
 
 ---
 
+## Alinhamento da arquitetura com a documentação (merge da Frente 2)
+
+Após concluir a Frente 4, foi feita uma auditoria "código × documentação". A
+`ARCHITECTURE.md` e o ADR 0002 descrevem `functions/repositories/` e
+`functions/common/` como o estado correto — mas esta branch ainda tinha
+`functions/crud/` e `functions/commom/`. Ou seja, a única frente ausente aqui
+era a **Frente 2**, que **já estava implementada e completa na branch
+`frente2-leo`**. A decisão (aprovada) foi **integrá-la via merge**, em vez de
+reimplementar (o que duplicaria commits e geraria conflito futuro).
+
+### Gap analysis (antes do merge)
+
+| Frente | Estado nesta branch antes do merge |
+|---|---|
+| 1 — infra/segurança | ✅ presente (`.gitignore`, CORS via env) |
+| 2 — renomear/centralizar/bug | ❌ ausente aqui · ✅ pronta em `frente2-leo` |
+| 3 — qualidade FastAPI | ✅ presente (Pydantic + `lru_cache` + `response_model`) |
+| 4 — serviços/testes | ✅ feita nesta sessão |
+
+### Limpeza prévia (resquícios pré-`.gitignore`)
+
+O `.gitignore` já ignorava `__pycache__/`, `*.pyc` e `.venv/`, mas **87 arquivos
+de bytecode e o `.venv/pyvenv.cfg` estavam rastreados** de commits antigos.
+Foram **destrastreados** (`git rm --cached`) para limpar o diff e permitir um
+merge limpo. (O `.venv/` desta máquina também estava vazio/quebrado e foi
+recriado.)
+
+### O que a Frente 2 trouxe
+
+- `crud/` → `repositories/` e `commom/` → `common/` (renomeação + correção de typo)
+- `_db()` **centralizado** em `common/dbref.py` (antes duplicado em ~14 arquivos)
+- `repositories/docente_crud.py` usa o enum `TipoDocente` (remove `TIPOS_VALIDOS`)
+- bug `find_by_orcid` (`self._node()` → `self.ref()`) na versão canônica
+
+### Resolução de conflitos
+
+O merge gerou 9 conflitos. Princípio de resolução: **manter o código moderno
+(Frentes 3/4) sobre a estrutura nova (Frente 2)**.
+
+| Conflito | Resolução |
+|---|---|
+| 8 routers em `api_routes/*` (moderno vs original) | Mantida a versão **moderna** (Frente 3); imports ajustados para `functions.repositories` |
+| `crud/docente_crud.py` (modify/delete) | Aceita a deleção; versão canônica é `repositories/docente_crud.py` (Frente 2) |
+| imports `functions.crud`/`functions.commom` em todo o código **e nos testes** | `sed` global → `functions.repositories`/`functions.common` |
+| `tests/test_base_crud.py` (fixture) | Passou a injetar `common.dbref.ref` (acesso centralizado) em vez do antigo `_db()` |
+
+### Verificação pós-merge
+
+- `def _db` existe **apenas** em `common/dbref.py` ✅
+- `TIPOS_VALIDOS` removido; `_node()` inexistente ✅
+- `crud/` e `commom/` não existem mais ✅
+- Compilação de `functions/` OK; **54 passed, 1 skipped** ✅
+- API sobe; `/health`, `/docs` e a rota `/autores/{id}/metrics` respondem ✅
+
+**Estado final da branch:** Frentes 1 + 2 + 3 + 4 — arquitetura alinhada com
+`ARCHITECTURE.md` e os ADRs.
+
+---
+
 ## Arquivos criados/alterados
 
 **Criados**
@@ -205,6 +263,14 @@ coerente com a seção "Credenciais"/"Troubleshooting". As lacunas do README
 
 **Alterados**
 - `functions/main.py` — handler delega ao serviço; remoção de lógica e import ocioso
-- `functions/crud/docente_crud.py` — correção `self._node()` → `self.ref()`
 - `README.md` — seção "Testes"
 - `docs/frentes-refatoracao.md` — Frente 4 marcada como concluída
+
+**Via merge da Frente 2 (estrutura)**
+- `functions/crud/` → `functions/repositories/` · `functions/commom/` → `functions/common/`
+- imports atualizados em `api_routes/`, `services/`, `ingest/`, `workers/` e `tests/`
+- destrastreados `__pycache__/*.pyc` e `.venv/`
+
+**Commits desta sessão**
+- `frente4: camada de serviços (analytics) + suíte de testes`
+- `Merge frente2-leo: renomeações + centralização do banco (alinha arquitetura aos docs)`
