@@ -1,6 +1,7 @@
 # functions/ingest/openalex.py
 from fastapi import APIRouter, HTTPException, Query
 import requests, time, hashlib, json
+from functions.common.dbref import ref
 
 router = APIRouter(prefix="/ingest/openalex", tags=["Ingestão OpenAlex"])
 OPENALEX_BASE = "https://api.openalex.org/works"
@@ -10,17 +11,10 @@ def _hash_payload(d: dict) -> str:
     return hashlib.sha256(json.dumps(d, sort_keys=True).encode()).hexdigest()
 
 def _staging_ref():
-    # garante app inicializado e devolve a ref
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db.reference("staging/import_batches")
+    return ref("staging/import_batches")
 
 def _prov_ref():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db.reference("provenance")
+    return ref("provenance")
 
 @router.post("/works")
 def ingest_works(

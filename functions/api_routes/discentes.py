@@ -2,7 +2,7 @@ from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from functions.crud.discente_crud import DiscenteCRUD
+from functions.repositories.discente_crud import DiscenteCRUD
 from functions.domain.schemas import DiscenteCreate, DiscenteOut
 
 router = APIRouter(tags=["Discentes"])

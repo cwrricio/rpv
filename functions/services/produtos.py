@@ -19,7 +19,7 @@ def build_author_product_ranking(
 
 def _ranking_from_linked_docentes() -> list[RankingItem]:
     try:
-        from functions.commom.dbref import ref
+        from functions.common.dbref import ref
 
         autores_node = ref("autores").get() or {}
         counts_by_docente: dict[str, int] = {}

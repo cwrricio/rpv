@@ -4,15 +4,10 @@ import time
 
 from functions.workers.openalex_mapper import subtype_from_openalex_type
 from functions.workers.upsert import upsert_produto_bibliografico
-
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
+from functions.common.dbref import ref
 
 def _staging_orcid(orcid: str):
-    return _db().reference("staging/orcid_bundles").child(orcid)
+    return ref("staging/orcid_bundles").child(orcid)
 
 def _latest_batch_id(orcid: str) -> Optional[str]:
     batches = _staging_orcid(orcid).child("batches").get() or {}

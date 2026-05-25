@@ -1,19 +1,14 @@
 from fastapi import APIRouter, HTTPException, Query, Body
 from typing import Dict, Any, List, Optional
 import requests, time
+from functions.common.dbref import ref
 
 router = APIRouter(prefix="/ingest/semanticscholar", tags=["Semantic Scholar"])
 
 BASE = "https://api.semanticscholar.org/graph/v1"
 
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
-
 def _ref(p: str):
-    return _db().reference(p)
+    return ref(p)
 
 def _headers():
     # sem chave é ok (rate limit baixo). Pode setar um User-Agent custom se quiser.

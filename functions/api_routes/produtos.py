@@ -2,7 +2,7 @@ from functools import lru_cache
 
 from fastapi import APIRouter, Depends
 
-from functions.crud.produto_crud import ProdutoCRUD
+from functions.repositories.produto_crud import ProdutoCRUD
 from functions.services.produtos import build_author_product_ranking
 
 router = APIRouter(tags=["Produtos"])

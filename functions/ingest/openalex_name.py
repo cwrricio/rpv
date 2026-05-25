@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Optional, Tuple
 import time, requests, traceback
 from urllib.parse import urlparse
 from config.settings import settings
+from functions.common.dbref import ref
 
 router = APIRouter(tags=["OpenAlex Name"])  # prefix fica no main.py
 OPENALEX_BASE = "https://api.openalex.org"
@@ -135,16 +136,8 @@ def list_works_for_author(works_url_or_author_id: str, max_pages: Optional[int] 
     return works
 
 # =========================
-# Firebase helpers
-# =========================
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
-
 def _root_openalex():
-    return _db().reference("openalex")  # <- sempre salva aqui
+    return ref("openalex")  # <- sempre salva aqui
 
 def _save_bundle(author: Dict[str, Any], works: List[Dict[str, Any]]) -> Tuple[str, str]:
     """
@@ -300,14 +293,8 @@ def import_batch_by_names(
             raise HTTPException(400, "Envie 'names': [\"Nome 1\", \"Nome 2\", ...]")
 
         # --- helpers locais para /autores ---
-        def _db_local():
-            from config.firebase_admin_init import init_firebase
-            from firebase_admin import db
-            init_firebase()
-            return db
-
         def _ref(path: str):
-            return _db_local().reference(path)
+            return ref(path)
 
         def _first_last_known_institution(author_obj: Dict[str, Any]) -> Dict[str, Any] | None:
             lki = author_obj.get("last_known_institutions") or []

@@ -16,7 +16,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from functions.api_routes.docentes import crud, router
-from functions.crud.docente_crud import DocenteCRUD
+from functions.repositories.docente_crud import DocenteCRUD
 
 
 # --------------------------------------------------------------------------- #

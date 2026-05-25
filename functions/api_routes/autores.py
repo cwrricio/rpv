@@ -2,8 +2,8 @@
 from functools import lru_cache
 
 from fastapi import APIRouter, HTTPException, Depends
-from functions.crud.autor_crud import AutorCRUD
-from functions.crud.produto_crud import ProdutoCRUD
+from functions.repositories.autor_crud import AutorCRUD
+from functions.repositories.produto_crud import ProdutoCRUD
 
 router = APIRouter(tags=["Autores"])  # prefix definido no main.py
 

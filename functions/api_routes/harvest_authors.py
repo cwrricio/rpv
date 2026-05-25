@@ -1,4 +1,4 @@
-# functions/http/harvest_authors.py
+# functions/api_routes/harvest_authors.py
 from fastapi import APIRouter, Body, HTTPException
 from typing import Dict, Any, List, Optional, Tuple
 import time, traceback
@@ -16,16 +16,12 @@ from functions.ingest.orcid_api import fetch_orcid_record
 from functions.ingest.crossref_api import crossref_works_by_author
 from functions.ingest.semanticscholar_api import s2_author_search, s2_author
 
-# consolidador para /autores
-from functions.api_routes.autores_merge import _db as _db_merge
+from functions.common.dbref import ref
 
 router = APIRouter(prefix="/harvest", tags=["Harvest (All Free Sources)"])
 
-def _db():
-    return _db_merge()
-
 def _ref(path: str):
-    return _db().reference(path)
+    return ref(path)
 
 def _tail_orcid(v: Optional[str]) -> Optional[str]:
     if not v: return None
@@ -71,8 +67,8 @@ def _save_semanticscholar(author_id: str, data: Dict[str, Any]) -> None:
 
 def _merge_to_autores(orcid: Optional[str], openalex_id: Optional[str], s2_id: Optional[str], crossref_name: Optional[str]) -> Dict[str, Any]:
     """reaproveita o merge do módulo autores_merge (sem expor endpoint aqui)."""
-    from functions.http.autores_merge import _ref as _ref_merge
-    from functions.http.autores_merge import _find_autor_by_orcid_tail
+    from functions.api_routes.autores_merge import _ref as _ref_merge
+    from functions.api_routes.autores_merge import _find_autor_by_orcid_tail
     autor_payload = {}
     # carrega resumos de cada fonte (se existirem) e monta o melhor payload
     if openalex_id:

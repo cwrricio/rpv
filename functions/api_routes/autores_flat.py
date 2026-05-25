@@ -1,8 +1,9 @@
-# functions/http/autores_flat.py
+# functions/api_routes/autores_flat.py
 from fastapi import APIRouter, HTTPException, Body
 from typing import Dict, Any, Optional, List, Tuple
 import time, re
 from datetime import datetime
+from functions.common.dbref import ref
 
 # Reaproveita utilitários do seu módulo OpenAlex
 from functions.ingest.openalex_name import (
@@ -16,14 +17,8 @@ from functions.ingest.openalex_name import (
 router = APIRouter(prefix="/autores_flat", tags=["Autores • Flat por nome"])
 
 # ---------- Firebase helpers ----------
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
-
 def _ref(path: str):
-    return _db().reference(path)
+    return ref(path)
 
 # ---------- Strings & keys ----------
 def _slug_nome(nome: str) -> str:

@@ -2,7 +2,7 @@ from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from functions.crud.docente_crud import DocenteCRUD
+from functions.repositories.docente_crud import DocenteCRUD
 from functions.domain.schemas import DocenteCreate, DocenteOut
 
 router = APIRouter(tags=["Docentes"])

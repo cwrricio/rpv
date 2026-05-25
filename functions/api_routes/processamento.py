@@ -1,4 +1,4 @@
-# functions/http/processamento.py
+# functions/api_routes/processamento.py
 from fastapi import APIRouter, HTTPException
 from functions.workers.batch_processor import process_batch
 

@@ -10,9 +10,6 @@ Há duas camadas:
 2. Um teste com **emulador Firebase real**, executado apenas quando a variável
    FIREBASE_DATABASE_EMULATOR_HOST está definida (ex.:
    ``firebase emulators:start --only database``). Pulado caso contrário.
-
-Observação: nesta branch a pasta ainda se chama functions/crud/ (a renomeação
-para repositories/ é da Frente 2). BaseCRUD é o mesmo componente.
 """
 
 import os
@@ -20,8 +17,8 @@ import uuid
 
 import pytest
 
-import functions.crud.base as base_module
-from functions.crud.base import BaseCRUD
+import functions.repositories.base as base_module
+from functions.repositories.base import BaseCRUD
 
 
 # --------------------------------------------------------------------------- #
@@ -86,9 +83,14 @@ class FakeDB:
 
 @pytest.fixture
 def crud(monkeypatch):
-    """BaseCRUD apontando para um RTDB fake isolado por teste."""
+    """BaseCRUD apontando para um RTDB fake isolado por teste.
+
+    Após a Frente 2.4, BaseCRUD.ref() delega para functions.common.dbref.ref(path)
+    (acesso ao banco centralizado), importado como nome `ref` em base.py. Basta
+    substituir esse nome no módulo para isolar do Firebase.
+    """
     fake_db = FakeDB()
-    monkeypatch.setattr(base_module, "_db", lambda: fake_db)
+    monkeypatch.setattr(base_module, "ref", lambda path: fake_db.reference(path))
     return BaseCRUD("docentes")
 
 

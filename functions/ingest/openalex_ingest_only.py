@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Body, Query
 from typing import Dict, Any, List, Tuple
 import time, requests, traceback
 from config.settings import settings
+from functions.common.dbref import ref
 
 router = APIRouter(tags=["OpenAlex Ingest Only"])
 OPENALEX_BASE = "https://api.openalex.org"
@@ -50,14 +51,8 @@ def list_works_for_author(works_url: str, max_pages: int | None = None) -> List[
         time.sleep(0.2)
     return works
 
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
-
 def _root_openalex():
-    return _db().reference("openalex")
+    return ref("openalex")
 
 def _save_bundle(author: Dict[str, Any], works: List[Dict[str, Any]]) -> Tuple[str, str]:
     author_id = (author.get("id") or "").split("/")[-1]

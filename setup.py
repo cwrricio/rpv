@@ -5,7 +5,7 @@ structure = {
     # backend FastAPI + RTDB
     "functions": ["__init__.py", "main.py"],
     "functions/domain": ["__init__.py", "types.py"],
-    "functions/http": ["__init__.py", "pesquisas.py", "processamento.py"],
+    "functions/api_routes": ["__init__.py", "pesquisas.py", "processamento.py"],
     "functions/services": ["__init__.py", "pesquisa.py", "analytics.py"],
     "functions/ingest": ["__init__.py", "openalex.py"],
     "functions/workers": [

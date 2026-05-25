@@ -1,19 +1,13 @@
-# functions/http/processamento_openalex.py
+# functions/api_routes/processamento_openalex.py
 from fastapi import APIRouter, HTTPException
 from typing import Any, Dict
+from functions.common.dbref import ref
 
 router = APIRouter(tags=["Processamento OpenAlex"])  # prefix no main.py
 
-def _db():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db
-
 @router.post("/{author_id}", summary="Processar último batch de /openalex/{author_id}")
 def process(author_id: str) -> Dict[str, Any]:
-    db = _db()
-    root = db.reference("openalex").child(author_id)
+    root = ref("openalex").child(author_id)
     batches = root.child("batches").get() or {}
     if not batches:
         raise HTTPException(404, "Nenhum batch para esse author_id")

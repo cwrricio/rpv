@@ -1,7 +1,7 @@
-# functions/crud/veiculo_crud.py
+# functions/repositories/veiculo_crud.py
 from typing import Dict
-from functions.crud.base import BaseCRUD
-from functions.crud.validators import validate_issn
+from functions.repositories.base import BaseCRUD
+from functions.repositories.validators import validate_issn
 
 class VeiculoCRUD(BaseCRUD):
     def __init__(self):

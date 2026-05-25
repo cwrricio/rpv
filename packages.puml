@@ -36,23 +36,23 @@ package "apresentacao/src/services" as apresentacao_src_services {
 package "config" as config {
 }
 package "functions" as functions {
-  package "functions/commom" as functions_commom
-  package "functions/crud" as functions_crud
+  package "functions/api_routes" as functions_api_routes
+  package "functions/common" as functions_common
   package "functions/domain" as functions_domain
-  package "functions/http" as functions_http
   package "functions/ingest" as functions_ingest
+  package "functions/repositories" as functions_repositories
   package "functions/services" as functions_services
   package "functions/workers" as functions_workers
 }
-package "functions/commom" as functions_commom {
+package "functions/api_routes" as functions_api_routes {
 }
-package "functions/crud" as functions_crud {
+package "functions/common" as functions_common {
 }
 package "functions/domain" as functions_domain {
 }
-package "functions/http" as functions_http {
-}
 package "functions/ingest" as functions_ingest {
+}
+package "functions/repositories" as functions_repositories {
 }
 package "functions/services" as functions_services {
 }

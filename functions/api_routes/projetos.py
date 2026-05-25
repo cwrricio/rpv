@@ -2,7 +2,7 @@ from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from functions.crud.projeto_crud import ProjetoCRUD
+from functions.repositories.projeto_crud import ProjetoCRUD
 from functions.domain.schemas import ProjetoCreate, ProjetoOut
 
 router = APIRouter(tags=["Projetos"])

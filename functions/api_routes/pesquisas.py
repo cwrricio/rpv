@@ -2,7 +2,7 @@ from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from functions.crud.pesquisa_crud import PesquisaCRUD
+from functions.repositories.pesquisa_crud import PesquisaCRUD
 
 router = APIRouter(tags=["Pesquisas"])
 

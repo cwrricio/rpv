@@ -1,27 +1,18 @@
 # functions/workers/resolvers.py
+from functions.common.dbref import ref
+
+
 def _ext():  # /external_ids
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db.reference("external_ids")
+    return ref("external_ids")
 
 def _veiculos():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db.reference("veiculos")
+    return ref("veiculos")
 
 def _docentes():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db.reference("docentes")
+    return ref("docentes")
 
 def _externos():
-    from config.firebase_admin_init import init_firebase
-    from firebase_admin import db
-    init_firebase()
-    return db.reference("externos")
+    return ref("externos")
 
 def slug_doi(doi: str) -> str:
     return (doi or "").lower().strip().replace("/", "_")
