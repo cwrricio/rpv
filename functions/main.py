@@ -30,20 +30,16 @@ app = FastAPI(title="PosGrad Board (Python + RTDB)")
 _raw_origins = os.getenv("CORS_ORIGINS", "")
 if _raw_origins.strip():
     allow_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+    allow_origin_regex = None
 else:
-    # Fallback seguro para desenvolvimento local
-    allow_origins = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ]
+    # Fallback seguro para desenvolvimento local: aceita localhost em qualquer porta
+    allow_origins = []
+    allow_origin_regex = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

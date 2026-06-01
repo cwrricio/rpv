@@ -10,6 +10,51 @@ RTDB_AUTH = os.getenv("RTDB_AUTH")
 OPENALEX_MAILTO = (os.getenv("OPENALEX_MAILTO") or "").strip()
 OPENALEX_BASE = "https://api.openalex.org"
 
+
+def _maybe_set_default_google_creds() -> None:
+    """Tenta apontar GOOGLE_APPLICATION_CREDENTIALS para ./service-account.json.
+
+    Ajuda a rodar local sem export manual, mas só se o arquivo existir.
+    """
+    if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+        return
+    local = os.path.join(os.path.dirname(__file__), "service-account.json")
+    if os.path.exists(local):
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local
+
+
+def _get_admin_db():
+    """Retorna firebase_admin.db se conseguir inicializar; senão None."""
+    try:
+        import firebase_admin
+        from firebase_admin import credentials, db
+    except Exception:
+        return None
+
+    if not RTDB_URL:
+        return None
+
+    _maybe_set_default_google_creds()
+
+    try:
+        if not firebase_admin._apps:
+            project_id = (
+                os.getenv("PROJECT_ID")
+                or os.getenv("GCLOUD_PROJECT")
+                or os.getenv("GOOGLE_CLOUD_PROJECT")
+            )
+            cred = credentials.ApplicationDefault()
+            firebase_admin.initialize_app(
+                cred,
+                {
+                    "projectId": project_id,
+                    "databaseURL": RTDB_URL,
+                },
+            )
+        return db
+    except Exception:
+        return None
+
 def _headers() -> Dict[str, str]:
     ua = f"poshboard/0.1 (mailto:{OPENALEX_MAILTO})" if OPENALEX_MAILTO else "poshboard/0.1"
     return {"User-Agent": ua, "From": OPENALEX_MAILTO, "Accept": "application/json"}
@@ -119,11 +164,29 @@ def flatten_author(a: Dict[str, Any], works: List[Dict[str, Any]]) -> (str, Dict
 
 def rtdb_put(path: str, data: Any) -> Any:
     if not RTDB_URL: raise RuntimeError("Defina RTDB_URL no .env")
+
+    admin_db = _get_admin_db()
+    if admin_db is not None:
+        admin_db.reference(path).set(data)
+        return data
+
     url = f"{RTDB_URL}/{path}.json"
     if RTDB_AUTH: url += f"?auth={RTDB_AUTH}"
     r = requests.put(url, data=json.dumps(data, ensure_ascii=False).encode("utf-8"),
                      headers={"Content-Type": "application/json"}, timeout=30)
-    return _ok_json(r)
+    try:
+        return _ok_json(r)
+    except RuntimeError as e:
+        msg = str(e)
+        if "HTTP 401" in msg and "Permission denied" in msg:
+            raise RuntimeError(
+                "Permission denied no RTDB. Soluções comuns: "
+                "(1) defina RTDB_AUTH (token/secret) no .env, ou "
+                "(2) exporte GOOGLE_APPLICATION_CREDENTIALS apontando para o service-account.json "
+                "para gravar via firebase-admin (modo admin), ou "
+                "(3) ajuste as rules do Realtime Database para permitir escrita."
+            ) from e
+        raise
 
 def save_to_autores_flat(slug: str, data: Dict[str, Any]):
     return rtdb_put(f"autores_flat/{slug}", data)
@@ -143,7 +206,7 @@ def ingest_orcid_to_autores_flat(orcid: str, max_pages_works: int = 1):
 
 if __name__ == "__main__":
     orcids = [
-        "0000-0002-5420-6966",
+        "0000-0002-0159-3210",
     ]
     for oc in orcids:
         ingest_orcid_to_autores_flat(oc, max_pages_works=1)
