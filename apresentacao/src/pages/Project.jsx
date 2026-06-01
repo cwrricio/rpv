@@ -1,4 +1,4 @@
-import ProjectProvider from "./project/ProjectProvider";
+import ProjectProvider from "./Project/ProjectProvider";
 import ProjectHeader from "../components/project/ProjectHeader";
 import ProjectForm from "../components/project/ProjectForm";
 import ProjectList from "../components/project/ProjectList";

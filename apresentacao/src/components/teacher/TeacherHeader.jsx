@@ -1,4 +1,4 @@
-import { useTeachers } from "../../pages/teacher/TeacherProvider";
+import { useTeachers } from "./TeacherContext";
 
 export default function TeacherHeader() {
   const { showForm, setShowForm } = useTeachers();

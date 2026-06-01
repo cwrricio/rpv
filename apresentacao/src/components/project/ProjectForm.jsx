@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useProjects } from "../../pages/project/ProjectProvider";
+import { useProjects } from "../../pages/Project/ProjectProvider";
 import { useTeachers } from "../../components/teacher/TeacherContext";
 import { useStudents } from "../../components/student/StudentContext";
 import SearchSelect from "../ui/SearchSelect";

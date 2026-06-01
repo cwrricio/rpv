@@ -1,4 +1,4 @@
-import TeacherProvider from "./teacher/TeacherProvider";
+import TeacherProvider from "../components/teacher/TeacherContext";
 import TeacherHeader from "../components/teacher/TeacherHeader";
 import TeacherForm from "../components/teacher/TeacherForm";
 import TeacherList from "../components/teacher/TeacherList";

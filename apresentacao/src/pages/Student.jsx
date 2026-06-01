@@ -1,4 +1,4 @@
-import StudentProvider from "./student/StudentProvider";
+import StudentProvider from "../components/student/StudentContext";
 import StudentHeader from "../components/student/StudentHeader";
 import StudentForm from "../components/student/StudentForm";
 import StudentList from "../components/student/StudentList";

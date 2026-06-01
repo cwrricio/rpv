@@ -1,4 +1,10 @@
 {
+  "scripts": {
+    "dev": "npm --prefix apresentacao run dev",
+    "build": "npm --prefix apresentacao run build",
+    "preview": "npm --prefix apresentacao run preview",
+    "lint": "npm --prefix apresentacao run lint"
+  },
   "dependencies": {
     "recharts": "^3.2.1"
   }

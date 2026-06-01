@@ -1,5 +1,5 @@
 import TeacherCard from "./TeacherCard";
-import { useTeachers } from "../../pages/teacher/TeacherProvider";
+import { useTeachers } from "./TeacherContext";
 
 export default function TeacherList() {
   const { teachers } = useTeachers();

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTeachers } from "../../pages/teacher/TeacherProvider";
+import { useTeachers } from "./TeacherContext";
 
 const RESEARCH_LINES = [
   "Inteligência Artificial",

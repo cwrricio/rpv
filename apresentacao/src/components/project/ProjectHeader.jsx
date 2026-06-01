@@ -1,4 +1,4 @@
-import { useProjects } from "../../pages/project/ProjectProvider";
+import { useProjects } from "../../pages/Project/ProjectProvider";
 
 export default function ProjectHeader() {
   const ctx = useProjects() || {};
