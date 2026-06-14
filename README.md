@@ -10,7 +10,7 @@ O projeto tem duas partes:
 ## Requisitos
 
 - Python 3.11+ (testado localmente com 3.12)
-- Node.js 18+ (recomendado 20+)
+- Node.js 20+ 
 - (Opcional) Docker
 - Credenciais do Firebase para acesso ao RTDB (ver seção **Credenciais**)
 

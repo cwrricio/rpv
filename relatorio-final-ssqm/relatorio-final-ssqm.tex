@@ -1,0 +1,438 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{enumitem}
+\usepackage{csquotes}
+\usepackage[backend=biber,style=authoryear]{biblatex}
+
+\geometry{margin=2.5cm}
+\addbibresource{relatorio-final-ssqm.bib}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\setlist[itemize]{leftmargin=*}
+\setlist[enumerate]{leftmargin=*}
+\renewcommand{\arraystretch}{1.2}
+
+\title{Relat{\'o}rio Final SSQM -- Poshboard}
+\author{Equipe Poshboard}
+\date{8 de junho de 2026}
+
+\begin{document}
+
+\maketitle
+\nocite{poshboard_ssqm_2026}
+
+\section*{Identifica{\c c}{\~a}o}
+
+\begin{itemize}
+  \item \textbf{Projeto:} Poshboard (RPV).
+  \item \textbf{Modelo utilizado:} Software Sovereignty Quality Model (SSQM).
+  \item \textbf{Base de verifica{\c c}{\~a}o:} requisitos do relat{\'o}rio final SSQM, \texttt{README.md}, \texttt{docs/ARCHITECTURE.md}, ADRs em \texttt{docs/adr/}, manifests de depend{\^e}ncias, configura{\c c}{\~o}es Firebase/GitHub e c{\'o}digo-fonte.
+\end{itemize}
+
+\section*{Confer{\^e}ncia de Conformidade do Relat{\'o}rio}
+
+\begin{longtable}{p{0.31\textwidth} p{0.14\textwidth} p{0.45\textwidth}}
+\toprule
+\textbf{Requisito pedido} & \textbf{Status} & \textbf{Onde est{\'a} atendido} \\
+\midrule
+\endhead
+Vis{\~a}o Arquitetural Atual -- AS-IS & Atendido & Se{\c c}{\~a}o 1, com diagrama textual, componentes e achados arquiteturais. \\
+Invent{\'a}rio de Depend{\^e}ncias -- tabela completa & Atendido & Se{\c c}{\~a}o 2, cobrindo depend{\^e}ncias diretas, operacionais e supply chain. \\
+Lock-In Smells identificados por categoria & Atendido & Se{\c c}{\~a}o 3, com evid{\^e}ncias e classifica{\c c}{\~a}o por categoria. \\
+Resultado do checklist e pontua{\c c}{\~a}o SSQM & Atendido & Se{\c c}{\~a}o 4, com dimens{\~o}es, justificativas, total e n{\'i}vel SSQM. \\
+{\'I}ndices IDC, IP, IDAN e SSQMScore & Atendido & Se{\c c}{\~a}o 5, com crit{\'e}rios, matriz de c{\'a}lculo e interpreta{\c c}{\~a}o. \\
+Arquitetura Alvo -- TO-BE & Atendido & Se{\c c}{\~a}o 6, com diagrama textual e decis{\~o}es de soberania. \\
+Roadmap de migra{\c c}{\~a}o & Atendido & Se{\c c}{\~a}o 7, com horizontes de 0--6, 6--18 e 18--36 meses. \\
+Respostas objetivas esperadas & Atendido & Se{\c c}{\~a}o 8, respondendo diretamente as seis perguntas finais. \\
+\bottomrule
+\end{longtable}
+
+\section{Vis{\~a}o Arquitetural Atual -- AS-IS}
+
+O Poshboard {\'e} um sistema de gest{\~a}o acad{\^e}mica para programas de p{\'o}s-gradua{\c c}{\~a}o. A arquitetura atual combina backend Python/FastAPI, frontend React/Vite e persist{\^e}ncia principal em Firebase Realtime Database (RTDB).
+
+\begin{verbatim}
+Usuario
+  |
+  v
+Frontend React/Vite - apresentacao/
+  |                 \
+  |                  \ fallback direto via REST
+  v                   v
+Backend FastAPI       Firebase RTDB
+functions/main.py       ^
+  |                     |
+  v                     |
+Rotas, services,        |
+repositories e ingest   |
+  |                     |
+  v                     |
+Firebase Admin SDK -----+
+  |
+  +--> APIs externas de metadados academicos
+       OpenAlex, ORCID, Crossref, Semantic Scholar
+\end{verbatim}
+
+\subsection{Componentes Principais}
+
+\begin{longtable}{p{0.18\textwidth} p{0.22\textwidth} p{0.27\textwidth} p{0.25\textwidth}}
+\toprule
+\textbf{Camada} & \textbf{Evid{\^e}ncia} & \textbf{Responsabilidade} & \textbf{Observa{\c c}{\~a}o SSQM} \\
+\midrule
+\endhead
+Frontend & \texttt{apresentacao/src/} & Interface web, relat{\'o}rios, dashboards e CRUDs. & Usa API FastAPI, mas algumas telas possuem fallback direto para RTDB. \\
+Backend & \texttt{functions/main.py} & API REST, registro de rotas, agrega{\c c}{\~o}es e proxies. & Aplica{\c c}{\~a}o port{\'a}vel como FastAPI, mas persist{\^e}ncia acoplada ao Firebase. \\
+Reposit{\'o}rios & \texttt{functions/repositories/}, \texttt{functions/common/dbref.py} & CRUD sobre n{\'o}s do RTDB. & Existe tentativa positiva de centralizar acesso ao banco. \\
+Services/workers & \texttt{functions/services/}, \texttt{functions/workers/} & Regras de neg{\'o}cio e processamento de autores/produtos. & Ainda h{\'a} acesso direto ao Firebase fora dos reposit{\'o}rios. \\
+Ingest{\~a}o & \texttt{functions/ingest/} & Coleta dados externos de produ{\c c}{\~a}o acad{\^e}mica. & Depende de disponibilidade e pol{\'i}ticas de APIs externas. \\
+Infraestrutura & \texttt{firebase.json}, \texttt{.firebaserc}, \texttt{.github/workflows/} & Hosting, emulador, deploy e CI/CD. & H{\'a} drift de configura{\c c}{\~a}o entre README, Firebase config e workflows. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Principais Achados Arquiteturais}
+
+\begin{itemize}
+  \item O Firebase RTDB {\'e} a depend{\^e}ncia mais cr{\'i}tica: aparece no backend, nos reposit{\'o}rios, em services e como fallback em telas do frontend.
+  \item A camada \texttt{functions/common/dbref.py} reduz parte do acoplamento, mas n{\~a}o elimina chamadas diretas a \texttt{firebase\_admin.db}.
+  \item O frontend deveria consumir somente a API, mas ainda possui URLs diretas para \texttt{*.firebaseio.com}.
+  \item O projeto depende de APIs externas para enriquecimento bibliogr{\'a}fico; se essas APIs falham, ingest{\~a}o e atualiza{\c c}{\~a}o autom{\'a}tica ficam degradadas.
+  \item A documenta{\c c}{\~a}o e os arquivos de infraestrutura est{\~a}o parcialmente divergentes: \texttt{firebase.json} aponta para \texttt{public}, enquanto o README descreve \texttt{apresentacao/dist}; workflows usam \texttt{metaorganizer-project}, enquanto \texttt{.firebaserc} aponta para \texttt{poshbard}.
+  \item A documenta{\c c}{\~a}o arquitetural mistura estado atual e alvo: \texttt{docs/ARCHITECTURE.md} descreve Firestore, Firebase Authentication e Cloud Run Jobs, enquanto o c{\'o}digo atual ainda usa RTDB.
+\end{itemize}
+
+\section{Invent{\'a}rio de Depend{\^e}ncias}
+
+\small
+\begin{longtable}{p{0.08\textwidth} p{0.24\textwidth} p{0.21\textwidth} p{0.16\textwidth} p{0.11\textwidth} p{0.12\textwidth}}
+\toprule
+\textbf{ID} & \textbf{Depend{\^e}ncia} & \textbf{Categoria} & \textbf{Provedor} & \textbf{Criticidade} & \textbf{Lock-in} \\
+\midrule
+\endhead
+DEP-01 & Firebase Realtime Database & Banco cloud/BaaS & Google/Firebase & Alta & Alto \\
+DEP-02 & Firebase Admin SDK & SDK propriet{\'a}rio de acesso a dados & Google/Firebase & Alta & Alto \\
+DEP-03 & Google ADC/service account & IAM/credenciais & Google Cloud & Alta & Alto \\
+DEP-04 & Firebase Hosting/CLI/deploy & Hosting e deploy & Google/Firebase/GitHub & M{\'e}dia & M{\'e}dio/Alto \\
+DEP-05 & GitHub Actions & CI/CD & GitHub/Microsoft & M{\'e}dia & Baixo/M{\'e}dio \\
+DEP-06 & OpenAlex API & API externa de metadados & OpenAlex & Alta & M{\'e}dio \\
+DEP-07 & ORCID API & API externa de identidade acad{\^e}mica & ORCID & M{\'e}dia & Baixo \\
+DEP-08 & Crossref API & API externa de metadados & Crossref & M{\'e}dia & Baixo/M{\'e}dio \\
+DEP-09 & Semantic Scholar API & API externa de metadados & Semantic Scholar & M{\'e}dia & M{\'e}dio \\
+DEP-10 & FastAPI & Framework web OSS & Python & Alta & Baixo \\
+DEP-11 & Uvicorn & Servidor ASGI OSS & Python & Alta & Baixo \\
+DEP-12 & Pydantic/pydantic-settings & Valida{\c c}{\~a}o e configura{\c c}{\~a}o OSS & Python & Alta & Baixo \\
+DEP-13 & python-dotenv & Configura{\c c}{\~a}o local OSS & Python & Baixa & Baixo \\
+DEP-14 & requests & Cliente HTTP OSS & Python & M{\'e}dia & Baixo \\
+DEP-15 & React/react-dom & UI framework OSS & npm & Alta & Baixo/M{\'e}dio \\
+DEP-16 & Vite/plugin React & Build tool OSS & npm & M{\'e}dia & Baixo \\
+DEP-17 & react-router-dom & Roteamento frontend OSS & npm & M{\'e}dia & Baixo \\
+DEP-18 & Chart.js/react-chartjs-2/Recharts & Visualiza{\c c}{\~a}o OSS & npm & M{\'e}dia & Baixo \\
+DEP-19 & Firebase JS SDK & SDK propriet{\'a}rio no frontend & Google/Firebase & Baixa atual & Alto \\
+DEP-20 & ESLint e plugins & Qualidade de c{\'o}digo OSS & npm & Baixa & Baixo \\
+DEP-21 & npm registry & Supply chain & npm & M{\'e}dia & Baixo/M{\'e}dio \\
+DEP-22 & PyPI/pip & Supply chain & Python & M{\'e}dia & Baixo/M{\'e}dio \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\subsection{Depend{\^e}ncias por Ecossistema}
+
+\begin{longtable}{p{0.25\textwidth} p{0.12\textwidth} p{0.36\textwidth} p{0.20\textwidth}}
+\toprule
+\textbf{Provedor/ecossistema} & \textbf{Qtd.} & \textbf{Depend{\^e}ncias principais} & \textbf{Risco SSQM} \\
+\midrule
+\endhead
+Google/Firebase & 5 & RTDB, Admin SDK, ADC, Hosting, Firebase JS SDK & Alto. \\
+APIs acad{\^e}micas externas & 4 & OpenAlex, ORCID, Crossref, Semantic Scholar & M{\'e}dio. \\
+npm/React & 7 & React, Vite, Router, gr{\'a}ficos, lint, npm & Baixo/m{\'e}dio. \\
+Python/PyPI & 6 & FastAPI, Uvicorn, Pydantic, dotenv, requests, PyPI & Baixo/m{\'e}dio. \\
+GitHub/Microsoft & 1 & GitHub Actions & Baixo/m{\'e}dio. \\
+\bottomrule
+\end{longtable}
+
+\section{Lock-In Smells Identificados}
+
+\small
+\begin{longtable}{p{0.08\textwidth} p{0.24\textwidth} p{0.21\textwidth} p{0.29\textwidth} p{0.10\textwidth}}
+\toprule
+\textbf{ID} & \textbf{Smell} & \textbf{Categoria} & \textbf{Evid{\^e}ncia} & \textbf{Severidade} \\
+\midrule
+\endhead
+CLS-01 & Firebase RTDB como persist{\^e}ncia principal & Database/Storage Lock-In & \texttt{config/firebase\_admin\_init.py}, \texttt{functions/repositories/base.py}, \texttt{functions/main.py}. & Cr{\'i}tica \\
+CLS-02 & SDK Firebase vazando para v{\'a}rias camadas & SDK/API Lock-In & \texttt{firebase\_admin.db} aparece em backend, services, scripts e reposit{\'o}rios. & Alta \\
+CLS-03 & Frontend com fallback direto para RTDB & Storage/API Bypass Lock-In & \texttt{VITE\_RTDB\_URL} e chamadas \texttt{*.firebaseio.com/*.json}. & Alta \\
+CLS-04 & Credenciais vinculadas ao Google ADC & Identity/Operational Lock-In & README e inicializa{\c c}{\~a}o Firebase exigem ADC ou service account. & Alta \\
+CLS-05 & Hosting e deploy acoplados ao Firebase & Infrastructure Lock-In & \texttt{firebase.json} e workflows com \texttt{FirebaseExtended/action-hosting-deploy}. & Moderada \\
+CLS-06 & Depend{\^e}ncia de APIs externas para ingest{\~a}o acad{\^e}mica & External API Lock-In & M{\'o}dulos OpenAlex, ORCID, Crossref e Semantic Scholar. & Moderada \\
+CLS-07 & Drift de configura{\c c}{\~a}o & Governance/Configuration Smell & \texttt{.firebaserc}, workflows e README apontam configura{\c c}{\~o}es divergentes. & Moderada \\
+CLS-08 & Documenta{\c c}{\~a}o arquitetural divergente & Knowledge/Strategic Smell & Arquitetura documentada mistura estado atual e alvo. & Moderada \\
+CLS-09 & Depend{\^e}ncia potencial de Firebase JS SDK & Authentication/Frontend Lock-In potencial & \texttt{apresentacao/package.json} declara \texttt{firebase}, embora o cliente atual esteja stubado. & Baixa atual \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\subsection{Classifica{\c c}{\~a}o por Categoria}
+
+\begin{longtable}{p{0.42\textwidth} p{0.12\textwidth} p{0.36\textwidth}}
+\toprule
+\textbf{Categoria} & \textbf{Qtd.} & \textbf{Itens} \\
+\midrule
+\endhead
+Database/Storage Lock-In & 2 & CLS-01, CLS-03 \\
+SDK/API Lock-In & 1 & CLS-02 \\
+Identity/Operational Lock-In & 1 & CLS-04 \\
+Infrastructure/DevOps Lock-In & 1 & CLS-05 \\
+External API Lock-In & 1 & CLS-06 \\
+Governance/Knowledge Smells & 2 & CLS-07, CLS-08 \\
+Authentication/Frontend Lock-In potencial & 1 & CLS-09 \\
+AI Lock-In & 0 & N{\~a}o h{\'a} depend{\^e}ncia de IA em produ{\c c}{\~a}o. \\
+\bottomrule
+\end{longtable}
+
+\section{Resultado do Checklist SSQM}
+
+Escala aplicada: 0 = n{\~a}o atende, 1 = atende parcialmente, 2 = atende plenamente.
+
+\begin{longtable}{p{0.34\textwidth} p{0.12\textwidth} p{0.45\textwidth}}
+\toprule
+\textbf{Dimens{\~a}o} & \textbf{Pontua{\c c}{\~a}o} & \textbf{Justificativa resumida} \\
+\midrule
+\endhead
+ST -- Soberania Tecnol{\'o}gica & 3/10 & Tecnologias abertas no stack, mas persist{\^e}ncia e opera{\c c}{\~a}o dependem de Firebase/Google. \\
+SO -- Soberania Operacional & 1/10 & N{\~a}o h{\'a} conting{\^e}ncia clara para indisponibilidade do provedor de dados. \\
+SD -- Soberania de Dados & 2/10 & N{\~a}o h{\'a} rotina documentada de exporta{\c c}{\~a}o, backup e migra{\c c}{\~a}o independente. \\
+SA -- Soberania Arquitetural & 4/10 & Existem reposit{\'o}rios e \texttt{dbref}, mas Firebase ainda aparece em v{\'a}rias camadas. \\
+SI -- Soberania de IA & 10/10 & O sistema atual n{\~a}o depende de IA externa em produ{\c c}{\~a}o. \\
+SDV -- Soberania de Desenvolvimento & 8/10 & Build local documentado; CI/CD e deploy ainda dependem de GitHub/Firebase. \\
+SK -- Soberania de Conhecimento & 6/10 & H{\'a} README, diagramas e docs, mas parte da arquitetura est{\'a} incompleta ou desatualizada. \\
+SE -- Soberania de Ecossistema & 3/10 & Concentra{\c c}{\~a}o Google/Firebase e falta monitoramento peri{\'o}dico. \\
+SS -- Soberania Estrat{\'e}gica & 2/10 & Falta plano formal de migra{\c c}{\~a}o, estimativas e prioriza{\c c}{\~a}o antes deste relat{\'o}rio. \\
+\bottomrule
+\end{longtable}
+
+\textbf{Pontua{\c c}{\~a}o total:} 39/90. \\
+\textbf{SSQMScore:} 43,3\%. \\
+\textbf{N{\'i}vel SSQM:} N{\'i}vel 3 -- Depend{\^e}ncia Moderada.
+
+\section{{\'I}ndices Calculados}
+
+\subsection{Crit{\'e}rios}
+
+\begin{itemize}
+  \item \textbf{IDC:} m{\'e}dia do risco das 9 depend{\^e}ncias externas/operacionais principais.
+  \item \textbf{CLSn:} m{\'e}dia dos pesos normalizados das severidades: Cr{\'i}tica = 1,00; Alta = 0,80; Moderada = 0,60; Baixa = 0,20.
+  \item \textbf{IP:} m{\'e}dia das notas de portabilidade, de 1 a 5, normalizada por 5.
+  \item \textbf{SSQMScore:} pontua{\c c}{\~a}o do checklist dividida por 90.
+  \item \textbf{IDAN:} m{\'e}dia entre depend{\^e}ncia cr{\'i}tica, smells, falta de portabilidade e falta de soberania.
+\end{itemize}
+
+\[
+IDAN = \frac{IDC + CLSn + (1 - IP) + (1 - SSQMScore)}{4}
+\]
+
+\subsection{Matriz de C{\'a}lculo}
+
+\begin{longtable}{p{0.48\textwidth} p{0.20\textwidth} p{0.22\textwidth}}
+\toprule
+\textbf{Depend{\^e}ncia cr{\'i}tica avaliada} & \textbf{Risco IDC} & \textbf{Portabilidade IP} \\
+\midrule
+\endhead
+Firebase RTDB & 0,90 & 1/5 \\
+Firebase Admin SDK & 0,80 & 2/5 \\
+Google ADC/service account & 0,75 & 2/5 \\
+Firebase Hosting/CLI/deploy & 0,60 & 3/5 \\
+GitHub Actions & 0,35 & 4/5 \\
+OpenAlex API & 0,55 & 3/5 \\
+ORCID API & 0,20 & 4/5 \\
+Crossref API & 0,30 & 4/5 \\
+Semantic Scholar API & 0,35 & 3/5 \\
+\bottomrule
+\end{longtable}
+
+\begin{itemize}
+  \item IDC = 4,80 / 9 = 0,53.
+  \item IP = ((26 / 9) / 5) = 0,58.
+  \item CLSn = (1,00 + 3 $\times$ 0,80 + 4 $\times$ 0,60 + 1 $\times$ 0,20) / 9 = 0,67.
+  \item SSQMScore = 39 / 90 = 0,43.
+  \item IDAN = (0,53 + 0,67 + 0,42 + 0,57) / 4 = 0,55.
+\end{itemize}
+
+\subsection{Resultados}
+
+\begin{longtable}{p{0.20\textwidth} p{0.16\textwidth} p{0.55\textwidth}}
+\toprule
+\textbf{{\'I}ndice} & \textbf{Valor} & \textbf{Interpreta{\c c}{\~a}o} \\
+\midrule
+\endhead
+IDC & 0,53 & Depend{\^e}ncia cr{\'i}tica m{\'e}dia/alta, puxada por Firebase RTDB, Admin SDK, ADC e OpenAlex. \\
+IP & 0,58 & Portabilidade moderada: stack de aplica{\c c}{\~a}o port{\'a}vel, mas dados e Firebase reduzem mobilidade. \\
+CLSn & 0,67 & Smells relevantes, com destaque para banco, SDK e bypass direto do frontend. \\
+SSQMScore & 0,43 & N{\'i}vel 3 SSQM, depend{\^e}ncia moderada. \\
+IDAN & 0,55 & Depend{\^e}ncia arquitetural em nuvem relevante. \\
+\bottomrule
+\end{longtable}
+
+\section{Arquitetura Alvo -- TO-BE}
+
+A arquitetura alvo recomendada preserva FastAPI, React, organiza{\c c}{\~a}o em rotas/reposit{\'o}rios e ingest{\~a}o modular, mas substitui depend{\^e}ncias propriet{\'a}rias por portas/adaptadores e armazenamento mais port{\'a}vel.
+
+\begin{verbatim}
+Usuario
+  |
+  v
+Frontend React/Vite
+  |
+  v
+API/BFF FastAPI
+  |
+  +--> Application services
+  |      |
+  |      +--> Portas de repositorio
+  |      +--> Portas de ingestao externa
+  |      +--> Portas de autenticacao
+  |
+  +--> Adaptador PostgreSQL
+  +--> Adaptador cache/filas
+  +--> Adaptadores OpenAlex/ORCID/Crossref/Semantic Scholar
+  +--> Exportacao/backup em formatos abertos
+\end{verbatim}
+
+\begin{longtable}{p{0.20\textwidth} p{0.25\textwidth} p{0.30\textwidth} p{0.17\textwidth}}
+\toprule
+\textbf{{\'A}rea} & \textbf{AS-IS} & \textbf{TO-BE recomendado} & \textbf{Ganho} \\
+\midrule
+\endhead
+Persist{\^e}ncia & Firebase RTDB & PostgreSQL como base can{\^o}nica, export JSON/CSV e migrations versionadas. & Reduz lock-in de dados. \\
+Acesso a dados & SDK Firebase em v{\'a}rias camadas & Interfaces de reposit{\'o}rio e adaptadores substitu{\'i}veis. & Permite trocar banco. \\
+Frontend & API e fallback RTDB & Frontend consome somente API. & Remove acoplamento do cliente. \\
+Ingest{\~a}o & Chamadas diretas a APIs externas & Jobs/filas com cache, retries, rate limiting e snapshots. & Aumenta continuidade. \\
+Credenciais & Google ADC/service account & Secrets independentes do provedor; opcional Keycloak. & Reduz depend{\^e}ncia Google. \\
+Deploy & Firebase Hosting e GitHub Actions & Container Docker em VPS, Kubernetes, Cloud Run ou ambiente h{\'i}brido. & Aumenta reproducibilidade. \\
+CI/CD & GitHub Actions espec{\'i}fico & Pipeline port{\'a}vel documentado. & Reduz plataforma {\'u}nica. \\
+Observabilidade & N{\~a}o evidenciada & Logs, m{\'e}tricas, backups testados e health checks. & Aumenta auditoria. \\
+\bottomrule
+\end{longtable}
+
+\section{Roadmap de Migra{\c c}{\~a}o}
+
+\subsection{Curto Prazo -- 0 a 6 Meses}
+
+\begin{longtable}{p{0.12\textwidth} p{0.42\textwidth} p{0.19\textwidth} p{0.18\textwidth}}
+\toprule
+\textbf{Prior.} & \textbf{A{\c c}{\~a}o} & \textbf{Depend{\^e}ncias} & \textbf{Esfor{\c c}o} \\
+\midrule
+\endhead
+Alta & Remover chamadas diretas do frontend ao RTDB e exigir acesso via FastAPI. & DEP-01, DEP-19 & 24--40 h \\
+Alta & Centralizar 100\% do acesso Firebase em repositories/adapters. & DEP-01, DEP-02 & 40--80 h \\
+Alta & Criar exporta{\c c}{\~a}o versionada dos dados em JSON/CSV. & DEP-01 & 24--40 h \\
+Alta & Corrigir drift de configura{\c c}{\~a}o. & DEP-04, DEP-05 & 8--16 h \\
+M{\'e}dia & Documentar mapa de n{\'o}s RTDB e modelo can{\^o}nico. & DEP-01 & 16--32 h \\
+M{\'e}dia & Adicionar testes para reposit{\'o}rios e endpoints principais. & Backend & 40--80 h \\
+M{\'e}dia & Criar camada de clientes para APIs externas com cache e timeout. & DEP-06 a DEP-09 & 32--64 h \\
+\bottomrule
+\end{longtable}
+
+\subsection{M{\'e}dio Prazo -- 6 a 18 Meses}
+
+\begin{longtable}{p{0.12\textwidth} p{0.42\textwidth} p{0.19\textwidth} p{0.18\textwidth}}
+\toprule
+\textbf{Prior.} & \textbf{A{\c c}{\~a}o} & \textbf{Depend{\^e}ncias} & \textbf{Esfor{\c c}o} \\
+\midrule
+\endhead
+Alta & Implementar adaptador PostgreSQL para entidades can{\^o}nicas. & DEP-01, DEP-02 & 120--220 h \\
+Alta & Criar script de migra{\c c}{\~a}o RTDB para PostgreSQL com valida{\c c}{\~a}o e rollback. & DEP-01 & 80--160 h \\
+Alta & Remover depend{\^e}ncia do Firebase JS SDK se continuar sem uso real. & DEP-19 & 8--16 h \\
+M{\'e}dia & Containerizar backend e frontend com build reprodut{\'i}vel. & DEP-04, DEP-05 & 40--80 h \\
+M{\'e}dia & Separar ingest{\~a}o pesada em jobs/worker com fila e retries. & DEP-06 a DEP-09 & 80--160 h \\
+M{\'e}dia & Criar pipeline CI/CD port{\'a}vel documentado. & DEP-05 & 24--48 h \\
+M{\'e}dia & Definir estrat{\'e}gia de autentica{\c c}{\~a}o pr{\'o}pria, se login real for necess{\'a}rio. & DEP-03 & 40--120 h \\
+\bottomrule
+\end{longtable}
+
+\subsection{Longo Prazo -- 18 a 36 Meses}
+
+\begin{longtable}{p{0.12\textwidth} p{0.42\textwidth} p{0.19\textwidth} p{0.18\textwidth}}
+\toprule
+\textbf{Prior.} & \textbf{A{\c c}{\~a}o} & \textbf{Depend{\^e}ncias} & \textbf{Esfor{\c c}o} \\
+\midrule
+\endhead
+Alta & Operar vers{\~a}o sem Firebase em ambiente pr{\'o}prio ou h{\'i}brido. & DEP-01 a DEP-04 & 160--320 h \\
+Alta & Automatizar backups, restore testado e plano de continuidade. & Dados/infra & 80--160 h \\
+M{\'e}dia & Manter cache/mirror local dos metadados acad{\^e}micos essenciais. & DEP-06 a DEP-09 & 80--200 h \\
+M{\'e}dia & Implantar observabilidade independente de provedor. & Infra & 40--120 h \\
+M{\'e}dia & Revisar SSQM semestralmente e atualizar invent{\'a}rio de depend{\^e}ncias. & Governan{\c c}a & 16--32 h/ciclo \\
+\bottomrule
+\end{longtable}
+
+\section{Respostas Objetivas Esperadas}
+
+\subsection{Qu{\~a}o dependente o sistema {\'e} de fornecedores externos?}
+
+O sistema tem depend{\^e}ncia relevante de fornecedores externos. O IDAN calculado foi 0,55, dentro da faixa 0,4--0,6. A depend{\^e}ncia n{\~a}o {\'e} cr{\'i}tica para todo o stack, pois FastAPI, React e bibliotecas centrais s{\~a}o abertas, mas {\'e} alta na camada de dados e opera{\c c}{\~a}o por causa do Firebase/Google.
+
+\subsection{Quais s{\~a}o os principais riscos de lock-in?}
+
+\begin{enumerate}
+  \item Firebase RTDB como banco principal.
+  \item Firebase Admin SDK usado diretamente fora de um adaptador {\'u}nico.
+  \item Frontend acessando RTDB diretamente como fallback.
+  \item Credenciais e opera{\c c}{\~a}o vinculadas ao Google ADC/service account.
+  \item Deploy/hosting em Firebase com configura{\c c}{\~a}o divergente.
+  \item Ingest{\~a}o dependente de APIs externas sem cache/snapshot robusto.
+\end{enumerate}
+
+\subsection{Qual o n{\'i}vel atual de soberania tecnol{\'o}gica?}
+
+O SSQMScore {\'e} 39/90, ou 43,3\%, classificando o projeto como N{\'i}vel 3 -- Depend{\^e}ncia Moderada. A leitura qualitativa {\'e}: soberania boa no c{\'o}digo-fonte e no stack aberto de aplica{\c c}{\~a}o, mas soberania fraca em dados, opera{\c c}{\~a}o e infraestrutura.
+
+\subsection{Quais depend{\^e}ncias devem ser removidas primeiro?}
+
+\begin{enumerate}
+  \item Acesso direto do frontend ao RTDB.
+  \item Chamadas diretas a \texttt{firebase\_admin.db} fora dos reposit{\'o}rios.
+  \item Firebase RTDB como armazenamento can{\^o}nico.
+  \item Firebase Hosting/deploy espec{\'i}fico.
+  \item Depend{\^e}ncia sem cache das APIs acad{\^e}micas externas.
+\end{enumerate}
+
+\subsection{Qual arquitetura futura aumenta a autonomia operacional?}
+
+A arquitetura alvo mais adequada {\'e} uma API FastAPI com portas/adaptadores, frontend consumindo somente a API, banco can{\^o}nico PostgreSQL, jobs de ingest{\~a}o desacoplados e deploy containerizado. Firebase pode permanecer temporariamente como adaptador legado durante a migra{\c c}{\~a}o, mas n{\~a}o deve continuar como modelo de dom{\'i}nio nem como canal direto do frontend.
+
+\subsection{Qual o esfor{\c c}o estimado para alcan{\c c}ar maior soberania digital?}
+
+\begin{longtable}{p{0.24\textwidth} p{0.22\textwidth} p{0.44\textwidth}}
+\toprule
+\textbf{Horizonte} & \textbf{Esfor{\c c}o aproximado} & \textbf{Objetivo} \\
+\midrule
+\endhead
+0--6 meses & 184--352 h & Reduzir acoplamentos diretos, corrigir configura{\c c}{\~o}es, criar exporta{\c c}{\~a}o e testes. \\
+6--18 meses & 392--764 h & Migrar persist{\^e}ncia can{\^o}nica, containerizar e tornar CI/CD port{\'a}vel. \\
+18--36 meses & 376--832 h & Operar sem Firebase, fortalecer continuidade, observabilidade e governan{\c c}a SSQM. \\
+\bottomrule
+\end{longtable}
+
+\textbf{Estimativa total:} 952--1.948 horas, variando conforme volume real de dados, cobertura de testes desejada e n{\'i}vel de automa{\c c}{\~a}o exigido.
+
+\section{Conclus{\~a}o}
+
+O Poshboard n{\~a}o est{\'a} preso por toda a sua tecnologia: linguagem, framework backend, frontend e bibliotecas principais s{\~a}o majoritariamente abertas e substitu{\'i}veis. O problema central de soberania est{\'a} na concentra{\c c}{\~a}o de dados, credenciais e opera{\c c}{\~a}o em Firebase/Google, somada a acessos diretos ao RTDB no backend e no frontend.
+
+A primeira meta de evolu{\c c}{\~a}o deve ser reduzir o acoplamento antes de trocar a infraestrutura. Em termos pr{\'a}ticos: remover o RTDB do frontend, encapsular Firebase em adaptadores, criar exporta{\c c}{\~a}o de dados e preparar PostgreSQL como persist{\^e}ncia can{\^o}nica.
+
+\printbibliography
+
+\end{document}
