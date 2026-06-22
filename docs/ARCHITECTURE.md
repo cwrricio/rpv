@@ -1,18 +1,20 @@
 # Arquitetura — Poshboard
 
-Objetivo: hospedar **front** e **back** de forma correta e preparar o backend em Python para **API** + **jobs agendados** (cron) para ingest/scraping (ex.: Lattes).
+**Última atualização**: 2026-06-22  
+**Status**: Implementado (Ports/Adapters com PostgreSQL + Firebase)
 
 > Decisões arquiteturais formalizadas em `docs/adr/`. Consulte os ADRs antes de propor mudanças estruturais.
 
 ---
 
-## Visão geral
+## Visão Geral
 
-- **Frontend:** React + Vite em `apresentacao/`, hospedado no Firebase Hosting.
-- **Backend:** FastAPI em Python, entrypoint em `functions/main.py`.
-- **Banco:** Firestore *(migração prevista — hoje ainda RTDB; ver ADR 0001)*.
-- **Auth:** Firebase Authentication no frontend; backend verifica o ID Token (JWT) nas rotas protegidas.
-- **Jobs/cron:** Cloud Run Jobs disparados pelo Cloud Scheduler, lendo e gravando no banco.
+- **Frontend**: React + Vite em `apresentacao/`, servido via nginx (Docker) ou Firebase Hosting (legado)
+- **Backend**: FastAPI em Python, entrypoint em `functions/main.py`
+- **Banco**: PostgreSQL (via StoragePort) ou Firebase Realtime Database (legado)
+- **Arquitetura**: **Ports/Adapters** — camada de domínio isolada, adaptadores para infra
+- **Cache**: Metadados acadêmicos em cache local com fallback para APIs externas
+- **Jobs**: Cloud Run Jobs + Cloud Scheduler para ingestão/scraping
 
 ---
 
@@ -26,26 +28,22 @@ Objetivo: hospedar **front** e **back** de forma correta e preparar o backend em
 
 ---
 
-## Estrutura de pastas
+## Estrutura de Pastas
 
 ```
 functions/
-├── main.py              ← entrypoint FastAPI: middleware, registro de routers
-├── api_routes/          ← [Interface HTTP] handlers de rota; sem lógica de negócio
-├── jobs/                ← [Interface Cron] entrypoints executáveis via Cloud Run Job
-├── services/            ← [Aplicação] orquestração e lógica de negócio
-├── workers/             ← [Aplicação] processamento em lote (ex.: pipeline raw→canonical)
-├── domain/              ← [Domínio] tipos, enums e regras (TipoDocente, StatusPesquisa)
-├── repositories/        ← [Infraestrutura] acesso ao banco (Firestore/RTDB); BaseCRUD aqui
-├── ingest/              ← [Infraestrutura] clientes HTTP externos (OpenAlex, ORCID, Crossref, S2)
-└── common/              ← utilitários compartilhados (ex.: dbref.py — único ponto de init do banco)
-
-config/
-├── firebase_admin_init.py   ← inicialização única do Firebase Admin SDK
-└── settings.py              ← variáveis de ambiente centralizadas
+├── main.py              # entrypoint FastAPI: middleware, registro de routers
+├── api_routes/          # [Interface HTTP] handlers de rota; sem lógica de negócio
+├── workers/             # [Aplicação] processamento em lote e jobs agendados
+├── services/            # [Aplicação] orquestração e lógica de negócio
+├── domain/              # [Domínio] tipos, enums e regras
+├── repositories/        # [Porta] StoragePort (protocolo)
+├── adapters/            # [Infra] Adaptadores: FirebaseRTDBAdapter, PostgresAdapter
+├── ingest/              # [Infra] APIs externas (OpenAlex, ORCID, Crossref, S2)
+└── common/              # [Infra] utils (dbref, http_client, metadata_cache)
 ```
 
-> **Nota de nomenclatura:** a pasta era `crud/` (renomeada para `repositories/`) e `commom/` com typo (corrigida para `common/`). Ver ADR 0002.
+> **Nota de nomenclatura**: a pasta `crud/` foi renomeada para `repositories/`. Ver ADR 0002.
 
 ---
 

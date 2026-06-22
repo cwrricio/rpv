@@ -155,9 +155,13 @@ from functions.api_routes.autores_generate import router as autores_generate_rou
 from functions.ingest.orcid_api import router as orcid_router
 from functions.ingest.crossref_api import router as crossref_router
 from functions.ingest.semanticscholar_api import router as s2_router
+from functions.ingest.openalex import router as openalex_router
 from functions.api_routes.autores_merge import router as autores_merge_router
 from functions.api_routes.harvest_authors import router as harvest_authors_router
 from functions.api_routes.autores_flat import router as autores_flat_router
+
+from functions.common import metadata_cache
+from functions.workers import incremental_update
 
 
 # OBS: nos módulos *não* use prefix= no APIRouter; deixe só @router.get("/") etc.
@@ -182,7 +186,12 @@ app.include_router(autores_flat_router)
 app.include_router(openalex_orcid_router,         prefix="/ingest/openalex-orcid")
 app.include_router(openalex_name_router,          prefix="/ingest/openalex-name")
 app.include_router(openalex_ingest_only_router,   prefix="/ingest/openalex")
+app.include_router(openalex_router)  # router com prefixo próprio /ingest/openalex
 app.include_router(processamento_openalex_router, prefix="/processamento/openalex")
+
+# Cache de metadados e workers
+app.include_router(metadata_cache.router)
+app.include_router(incremental_update.router)
 
 # 6) Loga as rotas ao iniciar (ajuda no debug)
 @app.on_event("startup")

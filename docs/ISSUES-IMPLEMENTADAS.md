@@ -133,13 +133,23 @@ Tinha apenas `return {"ok": True}` — sem nenhuma verificação real. A respost
 | `functions/ingest/crossref_api.py` | editado | #9 | `import requests` removido; usa `http_client.get` |
 | `functions/ingest/orcid_api.py` | editado | #9 | `import requests` removido; usa `http_client.get` |
 | `functions/ingest/semanticscholar_api.py` | editado | #9 | `import requests` removido; usa `http_client.get` |
-| `functions/ingest/openalex.py` | editado | #9 | `import requests` removido; usa `http_client.get` |
+| `functions/ingest/openalex.py` | editado | #9, #17 | `import requests` removido; usa `http_client.get`; cache implementado |
 | `tests/test_storage_contract.py` | **novo** | #10 | Contrato parametrizado: 14 casos × 2 backends |
 | `tests/test_http_client.py` | **novo** | #10 | 7 casos unitários do cliente HTTP |
 | `functions/main.py` | editado | #11, #15 | Removido print Google ADC; aviso se credencial desnecessária; health check com verificação real de DB |
 | `.env.example` | editado | #11 | Padrão trocado para postgres; variáveis Firebase comentadas |
 | `.github/workflows/ci.yml` | **novo** | #13 | Pipeline pytest + docker build + npm build sem Firebase |
 | `requirements.txt` | editado | — | `psycopg[binary]>=3.2.10` (versão 3.2.3 foi descontinuada) |
+| `scripts/backup_postgres.sh` | **novo** | #16 | Script de backup automatizado com validação |
+| `scripts/restore_postgres.sh` | **novo** | #16 | Script de restore com confirmação e backup de segurança |
+| `scripts/test_restore.sh` | **novo** | #16 | Teste automatizado de restore semanal |
+| `docs/PLANO-CONTINUIDADE.md` | **novo** | #16 | Plano completo de recuperação de desastres |
+| `functions/common/metadata_cache.py` | **novo** | #17 | Cache/mirror de metadados com TTL e fallback |
+| `functions/workers/incremental_update.py` | **novo** | #17 | Worker de atualização incremental |
+| `docs/OBSERVABILIDADE.md` | **novo** | #18 | Documentação de logs, métricas, health checks, dashboards |
+| `docs/ARCHITECTURE.md` | editado | #19 | Atualizado com arquitetura Ports/Adapters real |
+| `docs/ADR-INDEX.md` | **novo** | #19 | Índice de Architectural Decision Records |
+| `docs/CHECKLIST-REVISAO-SSQM.md` | **novo** | #20 | Checklist de revisão semestral do SSQM |
 
 ## Resultado dos testes
 
@@ -150,3 +160,138 @@ Tinha apenas `return {"ok": True}` — sem nenhuma verificação real. A respost
 - `test_storage_contract.py` — 28 cases (14 cenários × firebase_fake + postgres_sqlite)
 - `test_http_client.py` — 7 cases
 - `test_postgres_adapter.py` — 8 cases (pré-existentes, continuam passando)
+
+---
+
+## #16 — Backups automatizados, restore testado e plano de continuidade
+
+### Por que foi feito
+Com a migração para PostgreSQL (`STORAGE_BACKEND=postgres`), tornou-se crítica a implementação de uma estratégia de backups automatizados, testes de restore e um plano de continuidade de negócios. Sem backups, qualquer falha de hardware, corrupção de dados ou erro operacional resultaria em perda total de dados. O SSQM identificou isso como prioridade máxima (Nível 3 de soberania).
+
+### O que foi ajustado e porquê
+
+**`scripts/backup_postgres.sh` (arquivo novo)**
+Não existia nenhum script de backup automatizado. Backups manuais eram propensos a erro humano e esquecimento.
+→ Criado script com: (1) dumps versionados com timestamp, (2) compressão gzip, (3) validação automática (arquivo > 0 bytes), (4) cleanup automático (30 dias), (5) suporte a execução local ou via Docker.
+
+**`scripts/restore_postgres.sh` (arquivo novo)**
+Não existia procedimento documentado ou automatizado de restore. Em um incidente real, o tempo de recuperação seria imprevisível.
+→ Criado script com: (1) validação de integridade do backup (gzip test), (2) confirmação antes de destruir dados (ou --force), (3) backup de segurança do estado atual antes do restore, (4) verificação pós-restore (contagem de tabelas), (5) opção --dry-run para testes sem destruição.
+
+**`scripts/test_restore.sh` (arquivo novo)**
+Backups não testados são uma falsa sensação de segurança. Sem testes periódicos, não há garantia de que o restore funcionaria em produção.
+→ Criado script que: (1) pega o backup mais recente, (2) restaura em banco isolado (`poshboard_test_restore`), (3) verifica integridade (contagem de tabelas), (4) remove banco de teste. Projetado para rodar semanalmente via cron.
+
+**`docs/PLANO-CONTINUIDADE.md` (arquivo novo)**
+Não existia documentação formal de procedimentos de recuperação de desastres. Em uma emergência, a equipe perderia tempo valioso descobrindo o que fazer.
+→ Criado documento com: (1) estratégia de backup (frequência, retenção, localização), (2) procedimentos de recuperação (RTO/RPO definidos), (3) matriz de dependências críticas, (4) health checks e monitoramento, (5) contatos de emergência, (6) histórico de testes de DR.
+
+**Cron jobs automatizados**
+- Backup diário às 2h: `0 2 * * *` → `scripts/backup_postgres.sh`
+- Teste semanal domingo 3h: `0 3 * * 0` → `scripts/test_restore.sh`
+
+---
+
+## #17 — Cache/mirror local dos metadados acadêmicos essenciais (CLS-06)
+
+### Por que foi feito
+O sistema depende de 4 APIs externas (OpenAlex, ORCID, Crossref, Semantic Scholar) para ingestão de dados acadêmicos. Isso criava 3 problemas: (1) indisponibilidade de qualquer API bloqueava a ingestão, (2) rate limits e quotas podiam ser excedidos, (3) latência alta em chamadas repetidas. O smell CLS-06 identificou essa dependência externa crítica.
+
+### O que foi ajustado e porquê
+
+**`functions/common/metadata_cache.py` (arquivo novo)**
+Não existia nenhuma camada de cache de metadados. Cada chamada à API externa era feita do zero, sem reaproveitamento.
+→ Criado módulo com: (1) cache no próprio StoragePort (Firebase ou Postgres), (2) TTL diferenciado por tipo (autor: 7 dias, obra: 30 dias, instituição: 30 dias), (3) API `get_or_fetch()` (cache-first com fallback para API), (4) funções de cleanup de expirados, (5) endpoints de gestão (`/metadata-cache/stats`, `/metadata-cache/{entity_type}`, `/metadata-cache/{entity_type}/expired`).
+
+**`functions/workers/incremental_update.py` (arquivo novo)**
+O cache, uma vez populado, nunca era atualizado. Metadados expirados permaneciam obsoletos indefinidamente.
+→ Criado worker com: (1) varredura periódica de entradas expiradas, (2) atualização incremental das APIs, (3) fallback para cache expirado se API falhar (melhor que nada), (4) função `warm_up_cache()` para pós-deploy, (5) endpoints de trigger manual (`/workers/incremental-update/run`, `/warm-up`).
+
+**`functions/ingest/openalex.py` (editado)**
+A ingestão de obras do OpenAlex não usava cache. Mesmo buscas idênticas (ex.: "machine learning" com mesmos filtros) eram feitas repetidamente.
+→ Adicionado parâmetro `use_cache: bool` (default True). Quando True: (1) hash dos parâmetros de busca como chave de cache, (2) TTL curto para buscas (5 min), (3) fallback para cache expirado (30 dias) se API falhar, (4) response inclui `from_cache: int` (quantos items vieram do cache).
+
+**`functions/main.py` (editado)**
+Os novos routers não estavam registrados na aplicação.
+→ Adicionado imports e registro de `metadata_cache.router` e `incremental_update.router`.
+
+**Cron job automatizado**
+- Atualização incremental diária às 2h: `0 2 * * *` → `/workers/incremental-update/run` (via API)
+
+---
+
+## #18 — Observabilidade independente de provedor
+
+### Por que foi feito
+O sistema dependia delogs e métricas atrelados a provedores cloud (Firebase, Google Cloud). Isso criava lock-in e dificultava debug em ambiente local ou multi-cloud. O SSQM exigia observabilidade própria, independente devendor.
+
+### O que foi ajustado e porquê
+
+**`docs/OBSERVABILIDADE.md` (arquivo novo)**
+Não existia documentação unificada sobre logs, métricas e health checks. Cada desenvolvedor implementava observabilidade de forma inconsistente.
+→ Criado documento com: (1) padrão de logs estruturados (JSON), (2) descrição de endpoints de health (`/health` com verificação real de DB), (3) métricas expostas (`/metadata-cache/stats`), (4) dashboards recomendados (Grafana), (5) alertas críticos (DB down, backup falhou, etc), (6) ferramentas self-hosted (Loki, Promtail, Uptime Kuma), (7) exemplos de middleware (correlation ID, log de requests).
+
+**Health check robusto (`/health`)**
+Já implementado na Issue #15, agora documentado como parte da observabilidade.
+→ Com `STORAGE_BACKEND=postgres`, chama `storage.list("_health_check")` (leitura real). HTTP 200 se saudável, 503 se DB indisponível.
+
+---
+
+## #19 — Alinhar documentação arquitetural e ADRs (CLS-08)
+
+### Por que foi feito
+O documento `ARCHITECTURE.md` mencionava ADRs que não existiam no inventário. Havia documentação desalinhada com a arquitetura real implementada (Ports/Adapters). O smell CLS-08 identificou Knowledge/Strategic drift.
+
+### O que foi ajustado e porquê
+
+**`docs/ARCHITECTURE.md` (editado)**
+Estava desatualizado com a arquitetura de Ports/Adapters implementada. Citava Firestore como destino (não implementado), não mencionava PostgreSQL ou StoragePort.
+→ Atualizado com: (1) status atual (Ports/Adapters com PostgreSQL + Firebase), (2) estrutura de pastas real (adapters/, repositories/ como porta), (3) descrição correta das camadas, (4) remoção de referências a Firestore, (5) data de última atualização.
+
+**`docs/ADR-INDEX.md` (arquivo novo)**
+Não existia um índice centralizado de ADRs. Os ADRs em `docs/adr/` estavam dispersos sem catalogação.
+→ Criado documento com: (1) tabela de todos os ADRs (0001-0006 + novos), (2) template para novos ADRs, (3) mapeamento com smells SSQM, (4) links para todos os ADRs existentes.
+
+**ADR-INDEX inclui**:
+- 0001: Firestore em vez de RTDB (parcialmente implementado)
+- 0002: Manutenção sem reengenharia
+- 0003: Cloud Run em vez de Firebase Functions
+- 0004: Modelo Raw e Canonical
+- 0005: Handlers síncronos como dívida técnica
+- 0006: Correção do drift de configuração (CLS-07)
+
+---
+
+## #20 — Revisão semestral do SSQM e inventário de dependências
+
+### Por que foi feito
+A soberania não pode ser um esforço pontual. Sem revisão periódica, dependências se acumulam, documentation drift ocorre, e o SSQMScore degrada. Era necessário institucionalizar a prática de governança contínua.
+
+### O que foi ajustado e porquê
+
+**`docs/CHECKLIST-REVISAO-SSQM.md` (arquivo novo)**
+Não existia processo formal de revisão de soberania. Não havia baseline de SSQMScore para comparação futura.
+→ Criado checklist detalhado com: (1) inventário de dependências (DEP-xx), (2) reavaliação de smells (CLS-xx), (3) cálculo de SSQMScore (baseline: 43.3% → Nível 3, pós-issue: 75.5% → Nível 4 em progresso), (4) métricas de backup/DR, (5) roadmap de iniciativas, (6) histórico de revisões, (7) template de aprovação.
+
+**SSQMScore — Dimensões e Cálculo**:
+- Soberania de Dados (25%): 80 — Backups automatizados, restore testado
+- Portabilidade (20%): 90 — StoragePort, Docker, zero vendor lock-in
+- Observabilidade (15%): 60 — Health checks OK, falta dashboards
+- Resiliência (20%): 75 — Cache, retry, falta circuit breaker
+- Documentação (10%): 85 — ADRs, docs atualizados
+- Governança (10%): 50 — Revisão implementada, falta histórico
+
+**Cronograma**:
+- Revisão semestral (junho e dezembro)
+- Duração: 16-32 horas
+- Responsáveis: Tech Lead + 1 membro da equipe
+
+---
+
+## Cron Jobs Criados
+
+| Nome | Schedule | Ação | Job ID |
+|---|---|---|---|
+| Backup diário PostgreSQL | `0 2 * * *` | Executa `scripts/backup_postgres.sh` | `43f9a32fbaba` |
+| Teste semanal de restore | `0 3 * * 0` | Executa `scripts/test_restore.sh` | `6aca81f2be2a` |
+| Atualização incremental do cache | `0 2 * * *` | Chama `/workers/incremental-update/run` | `42c3cd67bedf` |
