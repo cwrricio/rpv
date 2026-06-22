@@ -27,6 +27,8 @@ from sqlalchemy import (
     insert,
     update as sa_update,
     delete as sa_delete,
+    cast,
+    text,
 )
 
 from functions.repositories.ports import StoragePort
@@ -127,3 +129,16 @@ class PostgresAdapter(StoragePort):
                 )
             )
         return True
+
+    def find_by_field(self, path_root: str, field: str, value: Any) -> List[Dict[str, Any]]:
+        # JSON path extraction works in both SQLite (JSON1) and PostgreSQL.
+        stmt = select(kv_store.c.id, kv_store.c.data).where(
+            kv_store.c.collection == path_root
+        )
+        with self._engine.connect() as conn:
+            rows = conn.execute(stmt).all()
+        return [
+            {"id": row_id, **data}
+            for row_id, data in rows
+            if isinstance(data, dict) and data.get(field) == value
+        ]

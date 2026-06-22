@@ -36,3 +36,7 @@ class StoragePort(Protocol):
     def delete(self, path_root: str, id: str) -> bool:
         """Remove o item; retorna True se removido, False se não existia."""
         ...
+
+    def find_by_field(self, path_root: str, field: str, value: Any) -> List[Dict[str, Any]]:
+        """Retorna todos os itens onde item[field] == value."""
+        ...

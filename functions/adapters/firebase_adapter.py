@@ -70,3 +70,11 @@ class FirebaseRTDBAdapter(StoragePort):
             return False
         node.delete()
         return True
+
+    def find_by_field(self, path_root: str, field: str, value: Any) -> List[Dict[str, Any]]:
+        snaps = self._ref(path_root).order_by_child(field).equal_to(value).get() or {}
+        return [
+            {"id": k, **v}
+            for k, v in snaps.items()
+            if isinstance(v, dict)
+        ]
