@@ -8,4 +8,4 @@ python-dotenv==1.0.1
 requests==2.32.3
 # SSQM — backend de armazenamento PostgreSQL (porta/adaptador)
 SQLAlchemy==2.0.36
-psycopg[binary]==3.2.3
+psycopg[binary]>=3.2.10
