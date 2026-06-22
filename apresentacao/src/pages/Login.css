@@ -25,7 +25,7 @@
   color: var(--text);
   font-size: 22px;
 }
-.login-card .btn-google {
+.login-card .btn-sso {
   width: 100%;
   display: inline-flex;
   gap: 8px;
@@ -37,15 +37,9 @@
   background: #ffffff;
   cursor: pointer;
 }
-.login-card .btn-google {
+.login-card .btn-sso {
   color: #000000; /* texto preto */
 }
-.login-card .btn-google svg {
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-}
-/* força paths do svg a usarem a cor atual (texto) */
 
 .divider {
   margin: 12px 0;
@@ -77,7 +71,4 @@
   border-radius: 12px;
   cursor: pointer;
   width: 100%;
-}
-.btn-google svg {
-  display: inline-block;
 }

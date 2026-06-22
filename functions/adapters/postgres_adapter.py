@@ -27,8 +27,6 @@ from sqlalchemy import (
     insert,
     update as sa_update,
     delete as sa_delete,
-    cast,
-    text,
 )
 
 from functions.repositories.ports import StoragePort
@@ -67,23 +65,46 @@ class PostgresAdapter(StoragePort):
     def _new_id() -> str:
         return uuid.uuid4().hex
 
+    @staticmethod
+    def _payload(obj: Dict[str, Any]) -> Dict[str, Any]:
+        return {k: v for k, v in obj.items() if k != "id"}
+
+    @classmethod
+    def _with_id(cls, row_id: str, data: Any) -> Dict[str, Any]:
+        if isinstance(data, dict):
+            return {"id": row_id, **cls._payload(data)}
+        return {"id": row_id, "value": data}
+
     def create(self, path_root: str, obj: Dict[str, Any]) -> Dict[str, Any]:
         new_id = self._new_id()
+        payload = self._payload(obj)
         with self._engine.begin() as conn:
-            conn.execute(insert(kv_store).values(collection=path_root, id=new_id, data=obj))
-        return {"id": new_id, **obj}
+            conn.execute(insert(kv_store).values(collection=path_root, id=new_id, data=payload))
+        return {"id": new_id, **payload}
+
+    def upsert(self, path_root: str, id: str, obj: Dict[str, Any]) -> Dict[str, Any]:
+        payload = self._payload(obj)
+        with self._engine.begin() as conn:
+            exists = conn.execute(
+                select(kv_store.c.id).where(
+                    kv_store.c.collection == path_root, kv_store.c.id == id
+                )
+            ).first()
+            if exists is None:
+                conn.execute(insert(kv_store).values(collection=path_root, id=id, data=payload))
+            else:
+                conn.execute(
+                    sa_update(kv_store)
+                    .where(kv_store.c.collection == path_root, kv_store.c.id == id)
+                    .values(data=payload)
+                )
+        return {"id": id, **payload}
 
     def list(self, path_root: str) -> List[Dict[str, Any]]:
         stmt = select(kv_store.c.id, kv_store.c.data).where(kv_store.c.collection == path_root)
         with self._engine.connect() as conn:
             rows = conn.execute(stmt).all()
-        out = []
-        for row_id, data in rows:
-            if isinstance(data, dict):
-                out.append({"id": row_id, **data})
-            else:
-                out.append({"id": row_id, "value": data})
-        return out
+        return [self._with_id(row_id, data) for row_id, data in rows]
 
     def get(self, path_root: str, id: str) -> Optional[Dict[str, Any]]:
         stmt = select(kv_store.c.data).where(
@@ -94,7 +115,7 @@ class PostgresAdapter(StoragePort):
         if row is None:
             return None
         data = row[0]
-        return {"id": id, **data} if isinstance(data, dict) else {"id": id, "value": data}
+        return self._with_id(id, data)
 
     def update(self, path_root: str, id: str, patch: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         with self._engine.begin() as conn:
@@ -105,8 +126,8 @@ class PostgresAdapter(StoragePort):
             ).first()
             if row is None:
                 return None
-            current = row[0] if isinstance(row[0], dict) else {}
-            merged = {**current, **patch}
+            current = self._payload(row[0]) if isinstance(row[0], dict) else {}
+            merged = {**current, **self._payload(patch)}
             conn.execute(
                 sa_update(kv_store)
                 .where(kv_store.c.collection == path_root, kv_store.c.id == id)
@@ -138,7 +159,7 @@ class PostgresAdapter(StoragePort):
         with self._engine.connect() as conn:
             rows = conn.execute(stmt).all()
         return [
-            {"id": row_id, **data}
+            self._with_id(row_id, data)
             for row_id, data in rows
             if isinstance(data, dict) and data.get(field) == value
         ]

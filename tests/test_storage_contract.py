@@ -109,6 +109,11 @@ class FakeFirebaseAdapter:
         node.child(key).set(obj)
         return {"id": key, **obj}
 
+    def upsert(self, path_root: str, id: str, obj: dict) -> dict:
+        payload = {k: v for k, v in obj.items() if k != "id"}
+        self._ref(path_root).child(id).set(payload)
+        return {"id": id, **payload}
+
     def list(self, path_root: str) -> list:
         data = self._ref(path_root).get() or {}
         if isinstance(data, dict):
@@ -168,6 +173,16 @@ def test_create_e_get_paridade(storage):
     item = storage.create("col", {"nome": "Alice"})
     got = storage.get("col", item["id"])
     assert got == item
+
+
+def test_upsert_preserva_id_e_substitui(storage):
+    item = storage.upsert("col", "rtdb-id", {"nome": "Alice", "id": "ignorado"})
+    assert item == {"id": "rtdb-id", "nome": "Alice"}
+    assert storage.get("col", "rtdb-id") == item
+
+    updated = storage.upsert("col", "rtdb-id", {"nome": "Alice 2"})
+    assert updated == {"id": "rtdb-id", "nome": "Alice 2"}
+    assert len(storage.list("col")) == 1
 
 
 def test_list_vazio(storage):

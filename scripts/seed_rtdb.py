@@ -8,8 +8,8 @@ from firebase_admin import credentials, db
 
 
 # ========= CONFIG POR AMBIENTE =========
-PROJECT_ID = os.environ.get("PROJECT_ID", "poshbard")
-RTDB_URL   = os.environ.get("RTDB_URL", "https://poshbard-default-rtdb.firebaseio.com")
+PROJECT_ID = os.environ.get("PROJECT_ID") or os.environ.get("FIREBASE_PROJECT_ID") or "poshbard"
+RTDB_URL = os.environ.get("RTDB_URL", f"https://{PROJECT_ID}-default-rtdb.firebaseio.com")
 GOOGLE_CREDS = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
 
 if not GOOGLE_CREDS or not os.path.exists(GOOGLE_CREDS):

@@ -62,7 +62,7 @@ mkissue "SSQM — Migração de dados RTDB -> PostgreSQL" \
 "ssqm,dados"
 
 mkissue "SSQM — Definir project id Firebase único (governança)" \
-"Unificar 'poshbard' (.firebaserc/RTDB) e 'metaorganizer-project' (workflows). Decisão humana pendente — ver ADR-001." \
+"Implementado: 'poshbard' definido como project id Firebase legado canonico; workflows legados de Hosting usam FIREBASE_PROJECT_ID=poshbard e segredo FIREBASE_SERVICE_ACCOUNT_POSHBARD/FIREBASE_SERVICE_ACCOUNT. Ver ADR-001." \
 "ssqm,governanca"
 
 echo "Concluído."
