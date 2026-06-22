@@ -4,11 +4,6 @@ const API = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(
   /\/$/,
   ""
 );
-const RTDB_FALLBACK = (
-  import.meta.env.VITE_RTDB_URL ||
-  "https://poshbard-default-rtdb.firebaseio.com"
-).replace(/\/$/, "");
-
 function normalizeMap(obj) {
   if (!obj) return [];
   if (Array.isArray(obj)) return obj;
@@ -252,7 +247,6 @@ export default function Home() {
       const candidates = [
         `${API}/autores_flat`,
         `${API}/autores-flat`,
-        `${RTDB_FALLBACK}/autores_flat.json`,
       ];
       let data = null;
       for (const url of candidates) {
@@ -463,71 +457,6 @@ export default function Home() {
       }
     } catch (e) {
       // continue to fallback
-    }
-
-    // last fallback: RTDB /produtos
-    try {
-      const r = await fetch(`${RTDB_FALLBACK}/produtos.json`);
-      if (r.ok) {
-        const all = await r.json();
-        const normalized = normalizeMap(all);
-        const produtoIds =
-          (a.produto_ids && Array.isArray(a.produto_ids)
-            ? a.produto_ids
-            : a.produto_id
-            ? [a.produto_id]
-            : []) || [];
-        let matched = [];
-        if (produtoIds.length > 0) {
-          const idSet = new Set(produtoIds);
-          matched = normalized.filter(
-            (p) => idSet.has(p.id) || idSet.has(p._id)
-          );
-        } else {
-          const nameLower = (a.name || "").trim().toLowerCase();
-          matched = normalized.filter((p) => {
-            if (!p) return false;
-            if (Array.isArray(p.autores))
-              return p.autores.some(
-                (x) => (x || "").trim().toLowerCase() === nameLower
-              );
-            if (typeof p.autores === "string")
-              return p.autores
-                .split(",")
-                .map((s) => s.trim().toLowerCase())
-                .includes(nameLower);
-            return false;
-          });
-        }
-        setAuthorWorks(
-          matched.map((p) => {
-            // Garantir que as publicações tenham a área de pesquisa do autor
-            const work = { ...p };
-
-            // Adicionar áreas de pesquisa do autor à publicação
-            if (
-              Array.isArray(a.research_areas) &&
-              a.research_areas.length > 0
-            ) {
-              work.research_areas = a.research_areas;
-            }
-
-            return {
-              id: p.id || p._id,
-              title: p.titulo || p.title || p.nome || "Sem título",
-              year: p.ano || p.year || "",
-              url: p.url || "",
-              area: a.research_areas || [],
-              original: work,
-            };
-          })
-        );
-        setLoadingWorks(false);
-        setQuery(a.name || "");
-        return;
-      }
-    } catch (e) {
-      // final fail
     }
 
     setError("Não foi possível obter produções deste autor");

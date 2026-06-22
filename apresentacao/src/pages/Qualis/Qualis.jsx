@@ -66,12 +66,12 @@ export default function Qualis() {
     return camposQualis;
   };
 
-  // Buscar dados do Firebase
+  // Buscar dados via API (sem acesso direto ao banco)
   useEffect(() => {
-    const RTDB_URL =
-      import.meta.env.VITE_RTDB_URL ||
-      "https://poshbard-default-rtdb.firebaseio.com";
-    const API = "http://127.0.0.1:8000";
+    const API = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(
+      /\/$/,
+      ""
+    );
 
     const fetchData = async () => {
       try {
@@ -82,8 +82,6 @@ export default function Qualis() {
 
         // Tentar diferentes endpoints para autores
         const autoresCandidates = [
-          `${RTDB_URL}/autores_flat.json`,
-          `${RTDB_URL}/autores.json`,
           `${API}/autores_flat`,
         ];
 
@@ -107,7 +105,6 @@ export default function Qualis() {
         // Buscar produtos (publicações)
         let produtosData = null;
         const produtosCandidates = [
-          `${RTDB_URL}/produtos.json`,
           `${API}/produtos`,
         ];
 
@@ -130,7 +127,6 @@ export default function Qualis() {
         // Buscar veículos (para obter Qualis)
         let veiculosData = null;
         const veiculosCandidates = [
-          `${RTDB_URL}/veiculos.json`,
           `${API}/veiculos`,
         ];
 
