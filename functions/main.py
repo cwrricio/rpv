@@ -9,14 +9,23 @@ from urllib.request import urlopen, Request
 
 # 1) Carrega .env o mais cedo possível
 load_dotenv()
-print("Firebase cred path:", os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
 
-# 2) Inicializa o Firebase apenas quando ele é o backend ativo (SSQM).
-#    Com STORAGE_BACKEND=postgres a aplicação sobe sem qualquer dependência Google.
 from config.settings import settings
-if (settings.STORAGE_BACKEND or "firebase").lower() == "firebase":
+
+_backend = (settings.STORAGE_BACKEND or "firebase").lower()
+
+# 2) Inicializa o Firebase apenas quando ele é o backend ativo.
+#    Com STORAGE_BACKEND=postgres a aplicação sobe sem qualquer credencial Google.
+if _backend == "firebase":
     from config.firebase_admin_init import init_firebase
     init_firebase()
+elif os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+    import warnings
+    warnings.warn(
+        "GOOGLE_APPLICATION_CREDENTIALS está definida mas STORAGE_BACKEND=postgres. "
+        "A credencial Google não será usada. Remova-a do ambiente para evitar confusão.",
+        stacklevel=1,
+    )
 
 # Camada de Aplicação: lógica de métricas extraída deste arquivo (Frente 4.1/4.2)
 from functions.services.analytics import compute_author_metrics
@@ -73,7 +82,17 @@ def root():
 
 @app.get("/health", summary="Health")
 def health():
-    return {"ok": True}
+    checks: dict = {"backend": _backend, "db": "ok"}
+    if _backend == "postgres":
+        try:
+            from functions.adapters import get_storage
+            storage = get_storage()
+            # Testa conectividade com uma leitura vazia na coleção sentinel.
+            storage.list("_health_check")
+        except Exception as exc:
+            checks["db"] = f"error: {exc}"
+            raise HTTPException(status_code=503, detail=checks)
+    return {"ok": True, **checks}
 
 @app.get("/autores_flat", summary="RTDB proxy: autores_flat")
 def autores_flat():
