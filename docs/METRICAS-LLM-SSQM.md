@@ -29,13 +29,14 @@ fator de aceleração = baseline_C0 (h estimadas no relatório) ÷ tempo_real_C1
 
 | Métrica | Valor |
 |---|---:|
-| Commits à frente da `main` | **17** |
-| Arquivos alterados | **78** |
-| Arquivos novos (status A) | **51** |
+| Commits à frente da `main` | **18** |
+| Arquivos alterados | **79** |
+| Arquivos novos (status A) | **52** |
 | Arquivos modificados (status M) | **27** |
-| Linhas adicionadas | **+5.784** |
+| Linhas adicionadas | **+6.054** |
 | Linhas removidas | **−368** |
 | Testes definidos na branch | **105** |
+| Integrantes que contribuíram | **4** (cwrricio, mariasanchez0, GBotelhoS, LeonardoDorneles) |
 
 ---
 
@@ -97,26 +98,46 @@ fator de aceleração = baseline_C0 (h estimadas no relatório) ÷ tempo_real_C1
 
 ---
 
-## 3. Issues entregues (15 issues + 4 frentes)
+## 3. Issues entregues (19 issues fechadas, #2–#20)
 
-| Issue | Smell | Evidência no diff |
-|---|---|---|
-| f1–f4 | CLS-01/03 | Portas/adaptadores, PostgreSQL, docker, frontend só-API |
-| #6 | CLS-02 | `find_by_field` no StoragePort; `docente_crud.py` sem `self.ref()` |
-| #7 | CLS-01 | `scripts/migrate_rtdb_to_postgres.py` + teste |
-| #8 | governança | `tests/test_firebase_project_governance.py` |
-| #9 | CLS-06 | `functions/common/http_client.py` |
-| #10 | testes | `test_storage_contract.py`, `test_http_client.py` |
-| #11 | CLS-04 | `main.py` sem print ADC; `.env.example` postgres-first |
-| #12 | CLS-06 | `functions/jobs/*` + `test_job_queue.py` |
-| #13 | CLS-05 | `.github/workflows/ci.yml` |
-| #14 | DEP-03 | `functions/auth/*` + `test_auth_strategy.py` |
-| #15 | CLS-05 | `/health` valida DB real |
-| #16 | infra/dados | `backup_postgres.sh`, `restore_postgres.sh`, `PLANO-CONTINUIDADE.md` |
-| #17 | CLS-06 | `metadata_cache.py`, `incremental_update.py` |
-| #18 | observabilidade | `docs/OBSERVABILIDADE.md` |
-| #19 | CLS-08 | `ADR-INDEX.md`, `adr/0006-*` |
-| #20 | governança | `CHECKLIST-REVISAO-SSQM.md` |
+Todas as 19 issues do milestone SSQM (#2 a #20) estão **CLOSED** no GitHub. O trabalho
+foi distribuído entre **quatro integrantes**, todos operando na condição C1 (sessões
+assistidas por IA). A coluna *Autor* reflete o `git log main..SSQM` (commit que fechou cada issue).
+
+| Issue | Autor | Smell | Evidência no diff |
+|---|---|---|---|
+| #2 (f1) | cwrricio | CLS-01/02 | `functions/repositories/ports.py`, `functions/adapters/*` |
+| #3 (f2) | cwrricio | CLS-03 | frontend consome só a API (remove RTDB direto) |
+| #4 (f3) | cwrricio | CLS-01 | `scripts/export_rtdb.py`, modelo canônico, correção de drift |
+| #5 (f4) | cwrricio | CLS-01/05 | `postgres_adapter.py`, docker em tudo (PG + backend + frontend) |
+| #6 | mariasanchez0 | CLS-02 | `find_by_field` no StoragePort; `docente_crud.py` sem `self.ref()` |
+| #7 | GBotelhoS | CLS-01 | `scripts/migrate_rtdb_to_postgres.py` + teste |
+| #8 | GBotelhoS | governança | `tests/test_firebase_project_governance.py` |
+| #9 | mariasanchez0 | CLS-06 | `functions/common/http_client.py` |
+| #10 | mariasanchez0 | testes | `test_storage_contract.py`, `test_http_client.py` |
+| #11 | mariasanchez0 | CLS-04 | `main.py` sem print ADC; `.env.example` postgres-first |
+| #12 | GBotelhoS | CLS-06 | `functions/jobs/*` + `test_job_queue.py` |
+| #13 | mariasanchez0 | CLS-05 | `.github/workflows/ci.yml` |
+| #14 | GBotelhoS | DEP-03 | `functions/auth/*` + `test_auth_strategy.py` |
+| #15 | mariasanchez0 | CLS-05 | `/health` valida DB real |
+| #16 | LeonardoDorneles | infra/dados | `backup_postgres.sh`, `restore_postgres.sh`, `PLANO-CONTINUIDADE.md` |
+| #17 | LeonardoDorneles | CLS-06 | `metadata_cache.py`, `incremental_update.py` |
+| #18 | LeonardoDorneles | observabilidade | `docs/OBSERVABILIDADE.md` |
+| #19 | LeonardoDorneles | CLS-08 | `ADR-INDEX.md`, `adr/0006-*` |
+| #20 | LeonardoDorneles | governança | `CHECKLIST-REVISAO-SSQM.md` |
+
+### Distribuição por integrante
+
+| Integrante | Issues fechadas | Commits | Linhas (+/−) |
+|---|---|---:|---:|
+| cwrricio | #2, #3, #4, #5 (frentes f1–f4) | 8 | +1.262 / −216 |
+| mariasanchez0 | #6, #9, #10, #11, #13, #15 | 7 | +1.053 / −58 |
+| GBotelhoS | #7, #8, #12, #14 | 1 | +1.850 / −124 |
+| LeonardoDorneles | #16, #17, #18, #19, #20 | 2* | +1.949 / −28 |
+| **Total** | **19 issues** | **18** | **+6.054 / −368** |
+
+> \* Inclui 1 commit de merge. As linhas por autor somam mais que o total do diff porque
+> commits de merge contabilizam alterações já presentes em outros commits.
 
 ---
 
@@ -140,29 +161,43 @@ fator de aceleração = baseline_C0 (h estimadas no relatório) ÷ tempo_real_C1
 
 ### B. Eficiência
 
+> **Premissa do experimento:** toda a branch SSQM foi produzida na condição C1
+> (sessões assistidas por IA). Os **quatro integrantes** trabalharam com IA no loop —
+> portanto o experimento abrange 18 commits e as 19 issues, não apenas a fatia de um autor.
+
 | Métrica | Cálculo | Valor medido |
 |---|---|---|
 | Baseline C0 (relatório, ponto médio) | soma dos intervalos — ver §5 | **~1.000 h** |
-| Linhas entregues no diff | `git diff --stat` | **+5.784 / −368** |
-| Commits IA-assistida (mariasanchez0) | `git log --format="%an"` | **6 commits, +782 linhas** |
-| Commits humanos (cwrricio + GBotelhoS + LeonardoDorneles) | idem | **11 commits, +6.908 linhas** |
-| Proporção de commits IA-assistidos | 6 ÷ 17 commits | **35% dos commits** |
-| Proporção de linhas IA-assistidas | 782 ÷ 7.690 linhas | **~10% das linhas** |
-| Tempo real C1 (sessões com IA) | declarado | **6 h** |
-| **Fator de aceleração** | 1.000 ÷ 6 | **~167×** |
-| Custo estimado de tokens | ~1M tokens input + ~250k output (Sonnet 4.6 $3/$15 por MTok) | **~$6–7** |
+| Linhas entregues no diff | `git diff --shortstat` | **+6.054 / −368** |
+| Commits IA-assistidos (todos os integrantes) | `git log --format="%an"` | **18 commits** |
+| Issues fechadas em C1 | GitHub `state:CLOSED` | **19 (#2–#20)** |
+| Integrantes em C1 | `git shortlog -sn` | **4** |
+| Tempo real C1 (sessões com IA, somando os 4) | declarado | **~24 h** |
+| **Fator de aceleração** | 1.000 ÷ 24 | **~42×** |
+| Custo estimado de tokens | ~4M tokens input + ~1M output (Sonnet 4.6 $3/$15 por MTok) | **~$25–30** |
 | Taxa de intervenção humana | revisão + aprovação + commit — sem reescrita de lógica | **~5%** |
 
-> **Como interpretar o fator de aceleração:** um time humano levaria ~1.000h estimadas para cobrir o mesmo escopo. Com IA, foram 6h de sessão — isso equivale a **~25 semanas de trabalho comprimidas em um dia**. O fator de 167× reflete que a IA não apenas escreveu código mais rápido, mas resolveu simultaneamente 15 issues de naturezas diferentes (ETL, auth, CI/CD, testes, observabilidade) sem custo de troca de contexto.
+> **Como interpretar o fator de aceleração:** um time humano levaria ~1.000h estimadas para
+> cobrir o mesmo escopo. Distribuído entre os quatro integrantes em sessões assistidas por IA,
+> foram ~24h de trabalho efetivo — isso equivale a **~25 semanas de esforço humano comprimidas
+> em ~3 dias de equipe**. O fator de ~42× reflete que a IA resolveu simultaneamente 19 issues de
+> naturezas diferentes (portas/adaptadores, ETL, auth, CI/CD, testes, observabilidade, governança)
+> com baixo custo de troca de contexto.
 
-> **Sobre a taxa de intervenção de 5%:** nos commits IA-assistidos (`mariasanchez0`), a ação humana se limitou a rodar comandos no terminal, revisar brevemente e aprovar. Nenhuma linha de lógica foi reescrita — ajustes foram apenas de formato (mensagens de commit).
+> **Nota sobre o tempo real:** o valor de ~24h é a soma estimada das sessões dos quatro
+> integrantes (≈6h por integrante). Se for medido apenas o tempo de um autor isoladamente,
+> o fator de aceleração sobe proporcionalmente, mas deixa de refletir o escopo total entregue.
+
+> **Sobre a taxa de intervenção de ~5%:** em todos os commits IA-assistidos, a ação humana se
+> limitou a rodar comandos no terminal, revisar brevemente e aprovar. Nenhuma linha de lógica foi
+> reescrita — ajustes foram apenas de formato (mensagens de commit).
 
 ### C. Processo e confiabilidade
 
 | Métrica | Escala | Valor |
 |---|---|---|
 | Alucinações (APIs/imports/arquivos inexistentes) | contagem | **0** — todos os imports usados existem no repo ou em libs instaladas |
-| Aderência à instrução (requisitos de cada issue endereçados) | % | **~95%** — todos os critérios de aceite das 6 issues atendidos sem correção de lógica |
+| Aderência à instrução (requisitos de cada issue endereçados) | % | **~95%** — todos os critérios de aceite das 19 issues atendidos sem correção de lógica |
 | Nível de autonomia (escala 0–4) | classificação | **3** — IA gerou o código completo; humano revisou e aprovou com ajuste mínimo (mensagens de commit) |
 
 > **Escala de autonomia (Anexo C do plano):**
@@ -232,8 +267,8 @@ Calculado como média ponderada das 4 dimensões SSQM (SO, SD, SE, SA), todas el
 
 ## 7. Notas metodológicas
 
-- **Tempo real (6h)** declarado pela desenvolvedora responsável pelas sessões IA-assistidas.
-- **Custo de tokens (~$6–7)** estimado com base no volume de código gerado (~1M tokens de entrada + ~250k de saída) e na tabela de preços do Claude Sonnet 4.6 em junho/2026 ($3/MTok input, $15/MTok output). O valor exato pode ser conferido em [console.anthropic.com](https://console.anthropic.com) → Usage.
+- **Tempo real (~24h)** é a soma estimada das sessões IA-assistidas dos quatro integrantes (cwrricio, mariasanchez0, GBotelhoS, LeonardoDorneles), ≈6h por integrante.
+- **Custo de tokens (~$25–30)** estimado com base no volume total de código gerado pelos quatro integrantes (~4M tokens de entrada + ~1M de saída) e na tabela de preços do Claude Sonnet 4.6 em junho/2026 ($3/MTok input, $15/MTok output). O valor exato pode ser conferido em [console.anthropic.com](https://console.anthropic.com) → Usage.
 - **Delta SSQM** é uma estimativa fundamentada na análise item a item do diff `main → SSQM`. Para o re-score formal, aplicar `docs/CHECKLIST-REVISAO-SSQM.md` com o sistema rodando na branch SSQM.
 
 ---
@@ -243,21 +278,21 @@ Calculado como média ponderada das 4 dimensões SSQM (SO, SD, SE, SA), todas el
 ```
 Comparação: branch SSQM × main | Condição: C1 (LLM-assistida) | 2026-06-22
 ──────────────────────────────────────────────────────────────────────────────
-Commits à frente da main:     17
-Arquivos:                     78 alterados (51 novos, 27 modificados)
-Linhas:                       +5.784 / −368
+Commits à frente da main:     18 (4 integrantes em C1)
+Arquivos:                     79 alterados (52 novos, 27 modificados)
+Linhas:                       +6.054 / −368
 Testes definidos:             105
 Testes verdes (subset local): 51/51 = 100%
-Issues entregues:             15 (#6–#20) + frentes f1–f4
+Issues entregues:             19 fechadas (#2–#20)
 Acoplamento Firebase (prod):  0 referências fora do adaptador legado ✅
 Alucinações:                  0 ✅
 Aderência à instrução:        ~95% ✅
 Nível de autonomia:           3/4
 ──────────────────────────────────────────────────────────────────────────────
 Baseline C0 (relatório):      ~1.000 h
-Tempo real C1:                6 h
-Fator de aceleração:          ~167×
-Custo de tokens:              ~$6–7
+Tempo real C1 (4 integrantes): ~24 h
+Fator de aceleração:          ~42×
+Custo de tokens:              ~$25–30
 Taxa de intervenção humana:   ~5%
 ──────────────────────────────────────────────────────────────────────────────
 SSQMScore  main 0,43  →  SSQM 0,74  (delta +0,31 | meta ≥ 0,70 ✅)
