@@ -4,15 +4,22 @@ Dashboard para programas de pós-graduação.
 
 O projeto tem duas partes:
 
-- **Backend**: API em Python (FastAPI) que lê/escreve no Firebase Realtime Database via Firebase Admin SDK.
-- **Frontend**: app React (Vite) em `apresentacao/`.
+- **Backend**: API em Python (FastAPI). A persistência passa por uma camada de
+  **portas/adaptadores** (`functions/repositories/ports.py` → `StoragePort`),
+  com dois adaptadores selecionáveis por `STORAGE_BACKEND`:
+  - `firebase` (default/legado): Firebase Realtime Database via Admin SDK.
+  - `postgres`: PostgreSQL via SQLAlchemy — **roda sem qualquer dependência Google**.
+- **Frontend**: app React (Vite) em `apresentacao/`, que consome **somente a API** (sem acesso direto ao banco).
+
+> 📄 Contexto e detalhes da migração de soberania: `docs/SSQM-IMPLEMENTACAO.md`,
+> `docs/DATA_MODEL.md` e `docs/ADR-001-config-drift.md`.
 
 ## Requisitos
 
 - Python 3.11+ (testado localmente com 3.12)
 - Node.js 20+ 
-- (Opcional) Docker
-- Credenciais do Firebase para acesso ao RTDB (ver seção **Credenciais**)
+- Docker + Docker Compose (recomendado para subir o stack completo)
+- Credenciais do Firebase **apenas** se usar `STORAGE_BACKEND=firebase` (ver seção **Credenciais**)
 
 ## Setup rápido (local)
 
@@ -76,8 +83,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\backend.ps1 -Port 800
 
 	Variáveis usadas pelo backend (ver `config/settings.py`):
 
-	- `PROJECT_ID` (obrigatório) — ex.: `poshbard`
-	- `RTDB_URL` (obrigatório) — ex.: `https://<seu-projeto>-default-rtdb.firebaseio.com`
+	- `STORAGE_BACKEND` (opcional, padrão `firebase`) — `firebase` ou `postgres`.
+	- `DATABASE_URL` (obrigatório se `STORAGE_BACKEND=postgres`) — ex.: `postgresql+psycopg://poshboard:poshboard@localhost:5432/poshboard`
+	- `PROJECT_ID` (obrigatório se `STORAGE_BACKEND=firebase`) — ex.: `poshbard`
+	- `RTDB_URL` (obrigatório se `STORAGE_BACKEND=firebase`) — ex.: `https://<seu-projeto>-default-rtdb.firebaseio.com`
 	- `API_PORT` (opcional, padrão `8000`)
 	- `OPENALEX_MAILTO` (opcional)
 	- `GOOGLE_APPLICATION_CREDENTIALS` (opcional; ver **Credenciais**)
@@ -112,8 +121,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\backend.ps1 -Port 800
 
 2. (Opcional) Configure variáveis de ambiente do Vite criando `apresentacao/.env`:
 
-	- `VITE_API_URL` (padrão: `http://127.0.0.1:8000`)
-	- `VITE_RTDB_URL` (fallback para leitura direta do RTDB em algumas telas)
+	- `VITE_API_URL` (padrão: `http://127.0.0.1:8000`) — o frontend consome somente a API.
+
+	> O antigo `VITE_RTDB_URL` (leitura direta do RTDB) foi **removido** na migração SSQM.
 
 3. Rode o dev server:
 
@@ -213,39 +223,32 @@ No Windows:
 	set FIREBASE_DATABASE_EMULATOR_HOST=127.0.0.1:9000 && pytest tests\test_base_crud.py
 	```
 
-## Rodar com Docker (opcional)
+## Rodar com Docker (recomendado)
 
-O `Dockerfile` sobe o backend via Uvicorn na porta `8080` (ou `PORT`).
+O `docker-compose.yml` sobe o stack completo — **PostgreSQL + backend + frontend** —
+sem depender de Firebase (`STORAGE_BACKEND=postgres` por padrão no compose):
 
 ```bash
-docker build -t poshboard-api .
-docker run --rm -p 8080:8080 \
-  --env-file .env \
-  -e PORT=8080 \
-  -v "$PWD/service-account.json:/tmp/service-account.json:ro" \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/service-account.json \
-  poshboard-api
+docker compose up --build
 ```
 
 Depois acesse:
 
-- http://127.0.0.1:8080/health
+- Frontend: http://localhost:8080
+- API: http://localhost:8000/health  •  Swagger: http://localhost:8000/docs
 
-## Firebase Hosting / Emulator (opcional)
+Imagens individuais: `Dockerfile.backend` (FastAPI/Uvicorn) e `apresentacao/Dockerfile`
+(build Vite servido por nginx, com proxy `/api` → backend).
+
+## Firebase Hosting / Emulator (legado, em depreciação)
+
+> A publicação canônica passou a ser via Docker (ver acima). O Firebase Hosting é
+> mantido como legado; ver `docs/ADR-001-config-drift.md`.
 
 O hosting está configurado para publicar `apresentacao/dist` (ver `firebase.json`).
 
-- Build do frontend:
-
-  ```bash
-  npm --prefix apresentacao run build
-  ```
-
-- Emulator de hosting:
-
-  ```bash
-  firebase emulators:start
-  ```
+- Build do frontend: `npm --prefix apresentacao run build`
+- Emulator de hosting: `firebase emulators:start`
 
 ## Troubleshooting
 
