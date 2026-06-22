@@ -11,9 +11,12 @@ from urllib.request import urlopen, Request
 load_dotenv()
 print("Firebase cred path:", os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
 
-# 2) Inicializa o Firebase uma única vez
-from config.firebase_admin_init import init_firebase
-init_firebase()
+# 2) Inicializa o Firebase apenas quando ele é o backend ativo (SSQM).
+#    Com STORAGE_BACKEND=postgres a aplicação sobe sem qualquer dependência Google.
+from config.settings import settings
+if (settings.STORAGE_BACKEND or "firebase").lower() == "firebase":
+    from config.firebase_admin_init import init_firebase
+    init_firebase()
 
 # Camada de Aplicação: lógica de métricas extraída deste arquivo (Frente 4.1/4.2)
 from functions.services.analytics import compute_author_metrics
@@ -53,10 +56,9 @@ def _rtdb_get(path: str):
     Usa a conexão autenticada do Firebase Admin SDK.
     """
     try:
-        # Usar o SDK do Firebase que já foi inicializado
-        from firebase_admin import db
-        ref = db.reference(path)
-        data = ref.get()
+        # Acesso roteado pela camada common/dbref (único ponto de contato RTDB).
+        from functions.common.dbref import ref as _ref
+        data = _ref(path).get()
         return data or {}
     except Exception as e:
         import traceback
