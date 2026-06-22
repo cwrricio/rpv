@@ -1,7 +1,8 @@
 # functions/ingest/openalex.py
 from fastapi import APIRouter, HTTPException, Query
-import requests, time, hashlib, json
+import time, hashlib, json
 from functions.common.dbref import ref
+from functions.common import http_client
 
 router = APIRouter(prefix="/ingest/openalex", tags=["Ingestão OpenAlex"])
 OPENALEX_BASE = "https://api.openalex.org/works"
@@ -38,10 +39,10 @@ def ingest_works(
     cursor = "*"
     for _ in range(max_pages):
         ps = {**params, "cursor": cursor}
-        r = requests.get(OPENALEX_BASE, params=ps, timeout=30)
-        if r.status_code != 200:
-            raise HTTPException(r.status_code, f"OpenAlex error: {r.text}")
-        data = r.json()
+        try:
+            data = http_client.get(OPENALEX_BASE, params=ps, timeout=30, cache_ttl=0)
+        except Exception as exc:
+            raise HTTPException(502, f"OpenAlex error: {exc}") from exc
 
         for work in data.get("results", []):
             h = _hash_payload(work)

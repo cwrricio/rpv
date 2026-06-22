@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, Path
 from typing import Dict, Any
-import requests, time
+import time
 
 from config.settings import settings
 from functions.common.dbref import ref
+from functions.common import http_client
 
 router = APIRouter(prefix="/ingest/orcid", tags=["ORCID"])
 
@@ -21,12 +22,13 @@ def _ua_headers() -> Dict[str, str]:
 def fetch_orcid_record(orcid: str) -> Dict[str, Any]:
     orcid = orcid.strip()
     url = f"https://pub.orcid.org/v3.0/{orcid}/record"
-    r = requests.get(url, headers=_ua_headers(), timeout=25)
-    if r.status_code == 404:
-        raise HTTPException(404, f"ORCID {orcid} não encontrado")
-    if not (200 <= r.status_code < 300):
-        raise HTTPException(502, f"ORCID {r.status_code}: {r.text[:300]}")
-    return r.json()
+    try:
+        return http_client.get(url, headers=_ua_headers(), timeout=25)
+    except Exception as exc:
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if status == 404:
+            raise HTTPException(404, f"ORCID {orcid} não encontrado") from exc
+        raise HTTPException(502, f"ORCID error: {exc}") from exc
 
 @router.get("/{orcid}", summary="Baixar profile ORCID e salvar em /external/orcid/{orcid}")
 def get_and_save(orcid: str = Path(..., example="0000-0001-5457-2600")):

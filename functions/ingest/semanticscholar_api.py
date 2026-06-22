@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query, Body
 from typing import Dict, Any, List, Optional
-import requests, time
+import time
 from functions.common.dbref import ref
+from functions.common import http_client
 
 router = APIRouter(prefix="/ingest/semanticscholar", tags=["Semantic Scholar"])
 
@@ -15,23 +16,32 @@ def _headers():
     return {"Accept": "application/json", "User-Agent": "poshboard/0.1"}
 
 def s2_author_search(q: str, limit: int = 5) -> Dict[str, Any]:
-    url = f"{BASE}/author/search"
-    r = requests.get(url, params={"query": q, "limit": limit, "fields": "name,affiliations,homepage,paperCount,citationCount,hIndex"}, headers=_headers(), timeout=25)
-    if not (200 <= r.status_code < 300):
-        raise HTTPException(502, f"S2 {r.status_code}: {r.text[:300]}")
-    return r.json()
+    try:
+        return http_client.get(
+            f"{BASE}/author/search",
+            params={"query": q, "limit": limit, "fields": "name,affiliations,homepage,paperCount,citationCount,hIndex"},
+            headers=_headers(),
+            timeout=25,
+        )
+    except Exception as exc:
+        raise HTTPException(502, f"S2 error: {exc}") from exc
 
 def s2_author(author_id: str, with_papers: bool = True, papers_limit: int = 200) -> Dict[str, Any]:
     fields = "name,aliases,affiliations,homepage,photoUrl,externalIds,paperCount,citationCount,hIndex"
     if with_papers:
-        fields += f",papers.title,papers.year,papers.citationCount,papers.externalIds,papers.venue,papers.authors"
-    url = f"{BASE}/author/{author_id}"
-    r = requests.get(url, params={"fields": fields, "limit": papers_limit}, headers=_headers(), timeout=25)
-    if r.status_code == 404:
-        raise HTTPException(404, f"S2 autor {author_id} não encontrado")
-    if not (200 <= r.status_code < 300):
-        raise HTTPException(502, f"S2 {r.status_code}: {r.text[:300]}")
-    return r.json()
+        fields += ",papers.title,papers.year,papers.citationCount,papers.externalIds,papers.venue,papers.authors"
+    try:
+        return http_client.get(
+            f"{BASE}/author/{author_id}",
+            params={"fields": fields, "limit": papers_limit},
+            headers=_headers(),
+            timeout=25,
+        )
+    except Exception as exc:
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if status == 404:
+            raise HTTPException(404, f"S2 autor {author_id} não encontrado") from exc
+        raise HTTPException(502, f"S2 error: {exc}") from exc
 
 @router.get("/author_search", summary="Procurar autor por nome (S2)")
 def author_search(q: str = Query(...), limit: int = Query(5)):
