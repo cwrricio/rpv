@@ -163,7 +163,7 @@ Tinha apenas `return {"ok": True}` — sem nenhuma verificação real. A respost
 
 ---
 
-## #16 — Backups automatizados, restore testado e plano de continuidade
+## #16 — Backups automatizados, restore testado e plano de continuidade     -LEO
 
 ### Por que foi feito
 Com a migração para PostgreSQL (`STORAGE_BACKEND=postgres`), tornou-se crítica a implementação de uma estratégia de backups automatizados, testes de restore e um plano de continuidade de negócios. Sem backups, qualquer falha de hardware, corrupção de dados ou erro operacional resultaria em perda total de dados. O SSQM identificou isso como prioridade máxima (Nível 3 de soberania).
