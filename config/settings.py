@@ -4,9 +4,15 @@ from pydantic import BaseModel, ConfigDict  # se quiser ignorar extras
 class Settings(BaseSettings):
     # model_config = ConfigDict(extra='ignore')  # (opcional) ignora envs extras
 
-    PROJECT_ID: str
-    RTDB_URL: str
+    # Opcionais: necessários apenas quando STORAGE_BACKEND="firebase".
+    PROJECT_ID: str | None = None
+    RTDB_URL: str | None = None
     API_PORT: int = 8000
+
+    # SSQM — seleção do backend de armazenamento (porta/adaptador).
+    # "firebase" (default, legado) ou "postgres".
+    STORAGE_BACKEND: str = "firebase"
+    DATABASE_URL: str | None = None
 
     OPENALEX_MAILTO: str | None = None  # <-- novo (opcional)
 
