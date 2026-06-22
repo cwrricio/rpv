@@ -43,7 +43,7 @@ e tornando o deploy portável via Docker.
 - `scripts/export_rtdb.py`: exporta cada nó para `exports/<timestamp>/<no>.{json,csv}`.
 - `docs/DATA_MODEL.md`: mapa de coleções canônicas + dívidas de migração.
 - `docs/ADR-001-config-drift.md`: corrige hosting dir (`apresentacao/dist`), depreca Firebase
-  Hosting em favor de Docker e registra a decisão pendente sobre o project id único.
+  Hosting em favor de Docker e registra a decisão de project id único.
 
 ### Pessoa 4 — PostgreSQL + Docker (CLS-01, infraestrutura)
 - `functions/adapters/postgres_adapter.py`: `StoragePort` em SQLAlchemy, tabela genérica
@@ -53,14 +53,77 @@ e tornando o deploy portável via Docker.
 - `Dockerfile.backend`, `apresentacao/Dockerfile` (+`nginx.conf`), `docker-compose.yml`
   (Postgres + backend + frontend), `.dockerignore`.
 
+### Issue #7 — Migração RTDB → PostgreSQL (dados)
+- `functions/repositories/ports.py`: `StoragePort` ganhou `upsert(path_root, id, obj)`
+  para preservar ids legados em migracoes/backfills sem mudar o `create` usado pela API.
+- `functions/adapters/firebase_adapter.py` e `functions/adapters/postgres_adapter.py`:
+  implementam `upsert` e removem `id` embutido do payload para manter a chave canonica.
+- `scripts/migrate_rtdb_to_postgres.py`: migra JSONs exportados por `scripts/export_rtdb.py`
+  para PostgreSQL, com dry-run por padrao, `--apply`, validacao por item e manifesto de rollback.
+- `functions/main.py`: leituras de `autores_flat` passaram pelo `StoragePort`, mantendo o
+  formato historico `{id: payload}` e evitando acesso direto ao RTDB nessas consultas.
+
+### Issue #8 — Project id Firebase unico (governanca)
+- `poshbard` foi definido como project id Firebase legado canonico por estar alinhado
+  com `.firebaserc` e com a RTDB URL usada pelos scripts legados.
+- `.github/workflows/firebase-hosting-merge.yml` e
+  `.github/workflows/firebase-hosting-pull-request.yml` deixam de apontar para
+  `metaorganizer-project` e usam `FIREBASE_PROJECT_ID=poshbard`.
+- O segredo project-specific antigo `FIREBASE_SERVICE_ACCOUNT_METAORGANIZER_PROJECT`
+  foi substituido por `FIREBASE_SERVICE_ACCOUNT_POSHBARD` ou pelo segredo generico
+  `FIREBASE_SERVICE_ACCOUNT`.
+- `scripts/seed_rtdb.py` passou a derivar a `RTDB_URL` padrao do project id ativo,
+  reduzindo duplicacao de constantes Firebase.
+
+### Issue #12 — Jobs/worker para ingestao pesada (CLS-06)
+- `functions/jobs/ports.py`: nova porta `JobQueuePort`, separando a API HTTP do
+  mecanismo concreto de fila.
+- `functions/jobs/sqlalchemy_queue.py`: fila portavel em SQLAlchemy (`job_queue`),
+  com idempotencia, retries, backoff simples e dead-letter (`status=dead`).
+- `functions/jobs/worker.py`: worker dedicado executavel por
+  `python -m functions.jobs.worker`, com logs basicos por job.
+- `functions/api_routes/harvest_authors.py`: novo endpoint assíncrono
+  `POST /harvest/batch/jobs`, preservando `POST /harvest/batch` como rota
+  síncrona legada para compatibilidade.
+- `functions/api_routes/jobs.py`: observabilidade basica para consultar/listar jobs.
+- `docker-compose.yml`: novo servico `worker`, usando a mesma imagem do backend e
+  o mesmo PostgreSQL.
+- Limitacoes atuais: replay de dead-letter ainda e manual e nao ha reaper automatico
+  para jobs que fiquem presos em `running` se o processo morrer no meio da execucao.
+
+### Issue #14 — Estrategia de autenticacao propria (DEP-03)
+- Estado atual validado: o frontend possui tela/contexto de login, mas sem login
+  real; `firebaseClient.js` esta stubado e o backend nao verifica JWT em rotas.
+- `functions/auth/ports.py`: nova porta `AuthProviderPort` e identidade
+  normalizada `AuthenticatedUser`, sem dependencia de Firebase.
+- `functions/auth/providers.py`: provider `disabled` como padrao seguro e
+  placeholder OIDC que falha fechado ate existir verificador JWT/JWKS aprovado.
+- `functions/auth/dependencies.py`: dependencias FastAPI reutilizaveis para
+  proteger rotas futuras sem espalhar detalhes do provedor.
+- `functions/api_routes/auth.py`: endpoints de POC/diagnostico
+  `GET /auth/config` e `GET /auth/me`.
+- `docs/adr/0006-autenticacao-oidc-independente.md`: ADR comparando manter sem
+  auth real, Firebase Auth, Keycloak/OIDC self-hosted e provedores gerenciados.
+- Limitacoes atuais: nenhuma rota de negocio foi protegida, `AUTH_REQUIRED`
+  continua `false` por padrao e a validacao real OIDC depende de decisao de
+  produto e escolha de biblioteca/verificador JWT.
+
 ## TDD / Testes
 
 Test-first nas frentes com lógica pura:
-- `tests/test_postgres_adapter.py` (8 testes, contrato sobre SQLite).
+- `tests/test_postgres_adapter.py` (contrato sobre SQLite).
 - `tests/test_export_rtdb.py` (3 testes).
+- `tests/test_storage_contract.py` (paridade do `StoragePort`, incluindo `upsert`).
+- `tests/test_migrate_rtdb_to_postgres.py` (migracao, validacao e rollback sobre SQLite).
+- `tests/test_firebase_project_governance.py` (drift de project id Firebase legado).
+- `tests/test_job_queue.py` (fila, retries/dead-letter e execucao do worker).
+- `tests/test_auth_strategy.py` (porta de auth, provider disabled e OIDC fail-closed).
 - `tests/test_base_crud.py` adaptado para injeção de `StoragePort`.
 
-**Resultado:** `65 passed, 1 skipped` (o skip é o teste opt-in contra o emulador Firebase real).
+**Resultado anterior:** `65 passed, 1 skipped` (o skip é o teste opt-in contra o emulador Firebase real).
+**Verificacao issue #7:** testes focados de adaptador/contrato/migracao passam em SQLite.
+**Verificacao issue #12:** testes focados de fila/worker passam em SQLite.
+**Verificacao issue #14:** testes focados de estrategia de auth passam sem Firebase.
 
 ## O que NÃO mudou (por requisito)
 
@@ -79,9 +142,24 @@ python -m pytest -q
 
 # Export de emergência dos dados (requer credenciais Firebase)
 python scripts/export_rtdb.py
+
+# Migracao RTDB JSON -> PostgreSQL (dry-run por padrao)
+python scripts/migrate_rtdb_to_postgres.py --source exports/<timestamp>
+
+# Aplicar e gerar manifesto de rollback
+python scripts/migrate_rtdb_to_postgres.py --source exports/<timestamp> --apply
+
+# Rollback manual a partir do manifesto gerado
+python scripts/migrate_rtdb_to_postgres.py --rollback exports/<timestamp>/migration_rollback_<timestamp>.json
+
+# Worker de ingestao em Docker
+docker compose up --build worker
+
+# Worker local
+python -m functions.jobs.worker --once
 ```
 
 ## Próximos passos (issues)
 
-Ver `scripts/github_issues.sh` — uma issue por frente + dívidas de migração (queries RTDB),
-project id único e migração de dados RTDB→Postgres.
+Ver `scripts/github_issues.sh` — uma issue por frente + dívidas remanescentes de migração
+(principalmente queries RTDB ainda legadas).

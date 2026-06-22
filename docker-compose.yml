@@ -32,6 +32,18 @@ services:
       db:
         condition: service_healthy
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    command: ["python", "-m", "functions.jobs.worker", "--poll-interval", "2"]
+    environment:
+      STORAGE_BACKEND: postgres
+      DATABASE_URL: postgresql+psycopg://poshboard:poshboard@db:5432/poshboard
+    depends_on:
+      db:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./apresentacao

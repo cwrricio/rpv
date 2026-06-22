@@ -85,11 +85,15 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\backend.ps1 -Port 800
 
 	- `STORAGE_BACKEND` (opcional, padrão `firebase`) — `firebase` ou `postgres`.
 	- `DATABASE_URL` (obrigatório se `STORAGE_BACKEND=postgres`) — ex.: `postgresql+psycopg://poshboard:poshboard@localhost:5432/poshboard`
-	- `PROJECT_ID` (obrigatório se `STORAGE_BACKEND=firebase`) — ex.: `poshbard`
+	- `PROJECT_ID` (obrigatório se `STORAGE_BACKEND=firebase`) — project id canônico legado: `poshbard`
+	- `FIREBASE_PROJECT_ID` (opcional; usado por scripts/workflows legados) — default: `poshbard`
 	- `RTDB_URL` (obrigatório se `STORAGE_BACKEND=firebase`) — ex.: `https://<seu-projeto>-default-rtdb.firebaseio.com`
 	- `API_PORT` (opcional, padrão `8000`)
 	- `OPENALEX_MAILTO` (opcional)
 	- `GOOGLE_APPLICATION_CREDENTIALS` (opcional; ver **Credenciais**)
+	- `AUTH_PROVIDER` (opcional, padrao `disabled`) — `disabled` ou `oidc`.
+	- `AUTH_REQUIRED` (opcional, padrao `false`) — nao proteja rotas ate haver decisao de produto.
+	- `OIDC_ISSUER_URL`, `OIDC_AUDIENCE`, `OIDC_JWKS_URL` (opcionais; reservados para POC OIDC).
 
 	Dica: existe um `.env.example` para referência.
 
@@ -182,6 +186,25 @@ CORS_ORIGINS=http://localhost:5173,https://meu-projeto.web.app,https://meu-domin
 
 > ⚠️ Em produção, defina `CORS_ORIGINS` explicitamente com apenas as origens autorizadas — nunca use `*` com `allow_credentials=True`.
 
+## Autenticacao
+
+O estado atual do produto continua sem login real obrigatorio. A API ganhou uma
+porta de autenticacao independente de provedor em `functions/auth/`, mas o
+provedor padrao e `AUTH_PROVIDER=disabled`, para manter o sistema executavel e
+nao reintroduzir dependencia de Firebase Auth ou identidade Google.
+
+Endpoints de diagnostico:
+
+```bash
+curl http://127.0.0.1:8000/auth/config
+curl http://127.0.0.1:8000/auth/me
+```
+
+Se o produto aprovar login real, o caminho recomendado e OIDC provider-agnostic
+(por exemplo Keycloak self-hosted). A POC ainda precisa adicionar verificacao
+JWT/JWKS antes de proteger rotas com `AUTH_REQUIRED=true`; ate la, `oidc` falha
+fechado para tokens recebidos.
+
 ## Testes (backend)
 
 A suíte de testes do backend vive em `tests/` e usa `pytest`.
@@ -223,9 +246,59 @@ No Windows:
 	set FIREBASE_DATABASE_EMULATOR_HOST=127.0.0.1:9000 && pytest tests\test_base_crud.py
 	```
 
+## Migrar RTDB JSON para PostgreSQL
+
+Use primeiro `scripts/export_rtdb.py` para gerar `exports/<timestamp>/<colecao>.json`.
+O migrador nao acessa Firebase: ele usa esses JSONs como fonte e escreve no
+PostgreSQL via `StoragePort`/`PostgresAdapter`.
+
+```bash
+# Dry-run: valida os arquivos e mostra o plano, sem escrever no banco
+python scripts/migrate_rtdb_to_postgres.py --source exports/<timestamp>
+
+# Aplicar no PostgreSQL preservando ids do RTDB
+python scripts/migrate_rtdb_to_postgres.py \
+  --source exports/<timestamp> \
+  --database-url postgresql+psycopg://poshboard:poshboard@localhost:5432/poshboard \
+  --apply
+
+# Opcional: espelhar exatamente o export removendo ids extras da colecao alvo
+python scripts/migrate_rtdb_to_postgres.py --source exports/<timestamp> --apply --replace
+
+# Rollback usando o manifesto criado na aplicacao
+python scripts/migrate_rtdb_to_postgres.py \
+  --database-url postgresql+psycopg://poshboard:poshboard@localhost:5432/poshboard \
+  --rollback exports/<timestamp>/migration_rollback_<timestamp>.json
+```
+
+## Jobs de ingestao academica
+
+A ingestao pesada pode ser enfileirada para um worker dedicado, sem lock-in
+proprietario: a fila usa SQLAlchemy sobre o mesmo `DATABASE_URL` do backend
+(`job_queue` no PostgreSQL; SQLite nos testes).
+
+```bash
+# Enfileirar harvest em lote (retorna 202 + job_id)
+curl -X POST http://127.0.0.1:8000/harvest/batch/jobs \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: harvest-2026-06-22-demo" \
+  -d '{"items":[{"name":"Diego Luis Kreutz"}],"max_works_pages":1}'
+
+# Consultar observabilidade basica
+curl http://127.0.0.1:8000/jobs/<job_id>
+curl "http://127.0.0.1:8000/jobs?status=dead"
+
+# Rodar worker local fora do Docker
+python -m functions.jobs.worker --poll-interval 2
+python -m functions.jobs.worker --once
+```
+
+Retries sao automaticos ate `max_attempts` (default: 3). Jobs que excedem as
+tentativas ficam com `status=dead` para inspeção/manual replay posterior.
+
 ## Rodar com Docker (recomendado)
 
-O `docker-compose.yml` sobe o stack completo — **PostgreSQL + backend + frontend** —
+O `docker-compose.yml` sobe o stack completo — **PostgreSQL + backend + worker + frontend** —
 sem depender de Firebase (`STORAGE_BACKEND=postgres` por padrão no compose):
 
 ```bash
@@ -236,6 +309,7 @@ Depois acesse:
 
 - Frontend: http://localhost:8080
 - API: http://localhost:8000/health  •  Swagger: http://localhost:8000/docs
+- Worker: servico `worker` no Compose, sem porta HTTP; acompanhe por `docker compose logs -f worker`
 
 Imagens individuais: `Dockerfile.backend` (FastAPI/Uvicorn) e `apresentacao/Dockerfile`
 (build Vite servido por nginx, com proxy `/api` → backend).
@@ -249,6 +323,10 @@ O hosting está configurado para publicar `apresentacao/dist` (ver `firebase.jso
 
 - Build do frontend: `npm --prefix apresentacao run build`
 - Emulator de hosting: `firebase emulators:start`
+- Project id Firebase legado canonico: `poshbard`.
+- Workflows de Hosting usam `FIREBASE_PROJECT_ID=poshbard` e esperam o segredo
+  `FIREBASE_SERVICE_ACCOUNT_POSHBARD` ou `FIREBASE_SERVICE_ACCOUNT`.
+- O segredo antigo `FIREBASE_SERVICE_ACCOUNT_METAORGANIZER_PROJECT` ficou obsoleto.
 
 ## Troubleshooting
 

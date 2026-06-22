@@ -30,6 +30,16 @@ def test_create_atribui_id_e_persiste(adapter):
     assert adapter.get("docentes", created["id"]) == created
 
 
+def test_upsert_preserva_id_e_substitui_payload(adapter):
+    created = adapter.upsert("docentes", "legacy-id", {"nome": "Maria", "id": "ignorado"})
+    assert created == {"id": "legacy-id", "nome": "Maria"}
+    assert adapter.get("docentes", "legacy-id") == created
+
+    updated = adapter.upsert("docentes", "legacy-id", {"nome": "Ana"})
+    assert updated == {"id": "legacy-id", "nome": "Ana"}
+    assert adapter.list("docentes") == [updated]
+
+
 def test_list_vazio_e_populado(adapter):
     assert adapter.list("docentes") == []
     adapter.create("docentes", {"nome": "A"})

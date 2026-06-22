@@ -18,6 +18,14 @@ class Settings(BaseSettings):
 
     GOOGLE_APPLICATION_CREDENTIALS: str | None = None
 
+    # SSQM #14 - autenticacao independente de provedor.
+    # Default desativado para preservar o comportamento atual ate decisao de produto.
+    AUTH_PROVIDER: str = "disabled"  # disabled | oidc
+    AUTH_REQUIRED: bool = False
+    OIDC_ISSUER_URL: str | None = None
+    OIDC_AUDIENCE: str | None = None
+    OIDC_JWKS_URL: str | None = None
+
     class Config:
         env_file = ".env"
 

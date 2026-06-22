@@ -11,7 +11,9 @@ Objetivo: hospedar **front** e **back** de forma correta e preparar o backend em
 - **Frontend:** React + Vite em `apresentacao/`, hospedado no Firebase Hosting.
 - **Backend:** FastAPI em Python, entrypoint em `functions/main.py`.
 - **Banco:** Firestore *(migração prevista — hoje ainda RTDB; ver ADR 0001)*.
-- **Auth:** Firebase Authentication no frontend; backend verifica o ID Token (JWT) nas rotas protegidas.
+- **Auth:** sem login real obrigatorio no estado atual; a estrategia alvo e OIDC
+  provider-agnostic via porta `functions/auth/`, com `AUTH_PROVIDER=disabled`
+  por padrao ate decisao de produto.
 - **Jobs/cron:** Cloud Run Jobs disparados pelo Cloud Scheduler, lendo e gravando no banco.
 
 ---
@@ -104,23 +106,62 @@ uvicorn functions.main:app --host 0.0.0.0 --port $PORT
 
 ---
 
-## Jobs agendados (Cloud Run Job + Cloud Scheduler)
+## Autenticacao provider-agnostic
 
-Job implementado: `functions/jobs/harvest_docentes.py`
+Implementacao atual:
+
+- `functions/auth/ports.py`: `AuthProviderPort` e `AuthenticatedUser`.
+- `functions/auth/providers.py`: provider `disabled` e placeholder OIDC que
+  falha fechado ate existir verificador JWT/JWKS aprovado.
+- `functions/auth/dependencies.py`: dependencias FastAPI reutilizaveis para
+  rotas futuras (`optional_user` e `required_user`).
+- `functions/api_routes/auth.py`: diagnostico sem segredos em `/auth/config` e
+  introspeccao em `/auth/me`.
+
+Decisao: nao usar Firebase Auth como caminho canonico de login novo. Se login
+real for necessario, a estrategia e OIDC independente de fornecedor, com
+Keycloak self-hosted como opcao preferencial de soberania e alternativas
+gerenciadas avaliadas por ADR.
+
+Variaveis relevantes:
+
+| Variavel | Descricao |
+|---|---|
+| `AUTH_PROVIDER` | `disabled` por padrao; `oidc` reservado para POC |
+| `AUTH_REQUIRED` | `false` por padrao para nao bloquear rotas existentes |
+| `OIDC_ISSUER_URL` | Issuer OIDC futuro |
+| `OIDC_AUDIENCE` | Audience esperada pela API |
+| `OIDC_JWKS_URL` | JWKS explicito, se o discovery nao for usado |
+
+---
+
+## Jobs/worker de ingestao (fila SQL)
+
+Implementacao atual:
+
+- `functions/jobs/ports.py`: `JobQueuePort`.
+- `functions/jobs/sqlalchemy_queue.py`: fila portavel sobre SQLAlchemy (`job_queue`).
+- `functions/jobs/worker.py`: worker dedicado (`python -m functions.jobs.worker`).
+- `functions/api_routes/jobs.py`: consulta/listagem de jobs.
 
 Fluxo:
-1. Lê `docentes` do banco.
-2. Para cada docente com `nome` (e opcionalmente `orcid`), coleta dados do OpenAlex.
-3. Salva raw via `ingest/`.
-4. Processa canonical via `workers/`.
+1. A API recebe uma requisicao curta, por exemplo `POST /harvest/batch/jobs`.
+2. A rota valida o payload e grava um job `harvest.batch` na fila.
+3. O worker dedicado reserva o proximo job pronto, executa a ingestao pesada e
+   grava resultado, retry ou dead-letter.
+4. O usuario acompanha status por `GET /jobs/{job_id}` ou `GET /jobs?status=dead`.
 
-Variáveis de ambiente do job:
+O mecanismo usa o banco configurado em `DATABASE_URL`; em Docker, o servico
+`worker` compartilha o PostgreSQL com o backend. Isso evita lock-in proprietario
+e dispensa Redis/RabbitMQ nesta fase.
 
-| Variável | Descrição |
+Variaveis relevantes:
+
+| Variavel | Descricao |
 |---|---|
-| `HARVEST_LIMIT` | Número máximo de docentes por execução |
-| `HARVEST_MAX_WORKS_PAGES` | Páginas máximas de obras por autor |
-| `HARVEST_SLEEP_S` | Intervalo entre requisições (rate limit) |
+| `DATABASE_URL` | Banco usado pela fila e pelo adaptador PostgreSQL |
+| `STORAGE_BACKEND` | Deve ser `postgres` no Compose |
+| `OPENALEX_MAILTO` | Identificacao educada para APIs academicas |
 
 Próximo adapter: `functions/ingest/lattes/` para coleta via Currículo Lattes.
 
@@ -158,4 +199,5 @@ Gera:
 | `docs/adr/0003` | Cloud Run em vez de Firebase Functions |
 | `docs/adr/0004` | Modelo Raw e Canonical |
 | `docs/adr/0005` | Handlers síncronos como dívida técnica |
+| `docs/adr/0006` | Autenticacao independente de provedor |
 | `docs/relatorio-refatoracao.md` | Análise completa de refatoração |

@@ -20,12 +20,43 @@ com itens identificados por `id` string e corpo em JSON.
 
 ## Contrato StoragePort
 
-Operações por coleção: `create / list / get / update / delete`
+Operações por coleção: `create / upsert / list / get / update / delete`
 (ver `functions/repositories/ports.py`). Implementações:
 
 - `FirebaseRTDBAdapter` — legado, sobre o RTDB.
 - `PostgresAdapter` — tabela genérica `kv_store(collection, id, data JSON)`,
   paridade nó-a-nó para migração incremental.
+
+`upsert(path_root, id, obj)` existe para fluxos de migracao/backfill: preserva
+o id legado exportado do RTDB e substitui o payload daquele item. O CRUD da API
+continua usando `create`, que gera id novo no adaptador ativo.
+
+## Migracao RTDB -> PostgreSQL (issue #7)
+
+Fonte esperada: JSONs gerados por `scripts/export_rtdb.py`, no formato
+`exports/<timestamp>/<colecao>.json`.
+
+Fluxo recomendado:
+
+```bash
+# 1) Validar o export sem escrever no banco
+python scripts/migrate_rtdb_to_postgres.py --source exports/20260622T000000Z
+
+# 2) Aplicar no PostgreSQL preservando ids RTDB
+python scripts/migrate_rtdb_to_postgres.py \
+  --source exports/20260622T000000Z \
+  --database-url postgresql+psycopg://poshboard:poshboard@localhost:5432/poshboard \
+  --apply
+
+# 3) Reverter usando o manifesto gerado, se necessario
+python scripts/migrate_rtdb_to_postgres.py \
+  --database-url postgresql+psycopg://poshboard:poshboard@localhost:5432/poshboard \
+  --rollback exports/20260622T000000Z/migration_rollback_<timestamp>.json
+```
+
+Use `--replace` apenas em janela controlada: ele remove ids extras nas colecoes
+migradas para espelhar exatamente o export, mas o manifesto tambem permite
+restaurar esses registros.
 
 ## Dívidas de migração (queries fora do StoragePort)
 

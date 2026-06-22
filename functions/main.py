@@ -4,8 +4,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
-import json
-from urllib.request import urlopen, Request
 
 # 1) Carrega .env o mais cedo possível
 load_dotenv()
@@ -57,21 +55,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-RTDB_URL = os.getenv("RTDB_URL") or os.getenv("REACT_APP_RTDB_URL") or "https://poshbard-default-rtdb.firebaseio.com"
+def _without_id(item: dict) -> dict:
+    return {k: v for k, v in item.items() if k != "id"}
 
-def _rtdb_get(path: str):
+
+def _storage_collection(path_root: str) -> dict:
+    """Retorna uma colecao no formato historico do RTDB: {id: payload}."""
+    from functions.adapters import get_storage
+
+    return {
+        item["id"]: _without_id(item)
+        for item in get_storage().list(path_root)
+        if isinstance(item, dict) and item.get("id")
+    }
+
+
+def _storage_item(path_root: str, item_id: str):
+    """Le um item pela porta ativa, sem expor a API concreta do banco."""
+    from functions.adapters import get_storage
+
+    item = get_storage().get(path_root, item_id)
+    return _without_id(item) if item else None
+
+
+def _legacy_storage_get(path: str):
     """
-    Acessa o Firebase RTDB e retorna os dados no caminho especificado.
-    Usa a conexão autenticada do Firebase Admin SDK.
+    Compatibilidade interna: le pelo StoragePort ativo.
+    Mantem paths historicos no formato "colecao/id".
     """
     try:
-        # Acesso roteado pela camada common/dbref (único ponto de contato RTDB).
-        from functions.common.dbref import ref as _ref
-        data = _ref(path).get()
-        return data or {}
+        # Compatibility path for older callers inside this module.
+        parts = [p for p in path.strip("/").split("/") if p]
+        if not parts:
+            return {}
+        if len(parts) == 1:
+            return _storage_collection(parts[0])
+        return _storage_item(parts[0], parts[1]) or {}
     except Exception as e:
         import traceback
-        print(f"Erro ao acessar RTDB ({path}): {str(e)}")
+        print(f"Erro ao acessar storage ({path}): {str(e)}")
         traceback.print_exc()
         raise e
 
@@ -94,25 +116,25 @@ def health():
             raise HTTPException(status_code=503, detail=checks)
     return {"ok": True, **checks}
 
-@app.get("/autores_flat", summary="RTDB proxy: autores_flat")
+@app.get("/autores_flat", summary="Colecao autores_flat")
 def autores_flat():
     try:
-        data = _rtdb_get("autores_flat")
+        data = _storage_collection("autores_flat")
         return data or {}
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"RTDB error: {e}")
+        raise HTTPException(status_code=502, detail=f"Storage error: {e}")
 
-@app.get("/autores_flat/{author_id}", summary="RTDB proxy: autor (autores_flat/{id})")
+@app.get("/autores_flat/{author_id}", summary="Autor em autores_flat/{id}")
 def autores_flat_item(author_id: str):
     try:
-        data = _rtdb_get(f"autores_flat/{author_id}")
+        data = _storage_item("autores_flat", author_id)
         if data is None:
             raise HTTPException(status_code=404, detail="Autor não encontrado")
         return data
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"RTDB error: {e}")
+        raise HTTPException(status_code=502, detail=f"Storage error: {e}")
 
 @app.get("/autores/{author_id}/metrics", summary="Agrega métricas a partir de autores_flat.{id}.works")
 def author_metrics(author_id: str):
@@ -127,14 +149,14 @@ def author_metrics(author_id: str):
     o handler apenas lê o nó do banco e trata o 404.
     """
     try:
-        node = _rtdb_get(f"autores_flat/{author_id}")
+        node = _storage_item("autores_flat", author_id)
         if not node:
             raise HTTPException(status_code=404, detail="Autor não encontrado")
         return compute_author_metrics(author_id, node)
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"RTDB error: {e}")
+        raise HTTPException(status_code=502, detail=f"Storage error: {e}")
 
 # 5) Importa e registra todos os routers (prefixos apenas aqui!)
 from functions.api_routes.docentes import router as docentes_router
@@ -158,6 +180,8 @@ from functions.ingest.semanticscholar_api import router as s2_router
 from functions.api_routes.autores_merge import router as autores_merge_router
 from functions.api_routes.harvest_authors import router as harvest_authors_router
 from functions.api_routes.autores_flat import router as autores_flat_router
+from functions.api_routes.jobs import router as jobs_router
+from functions.api_routes.auth import router as auth_router
 
 
 # OBS: nos módulos *não* use prefix= no APIRouter; deixe só @router.get("/") etc.
@@ -177,6 +201,8 @@ app.include_router(s2_router)
 app.include_router(autores_merge_router)
 app.include_router(harvest_authors_router)
 app.include_router(autores_flat_router)
+app.include_router(jobs_router)
+app.include_router(auth_router)
 
 
 app.include_router(openalex_orcid_router,         prefix="/ingest/openalex-orcid")

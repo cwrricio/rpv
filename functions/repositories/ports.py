@@ -21,6 +21,10 @@ class StoragePort(Protocol):
         """Cria um item na coleção e retorna {"id": ..., **obj}."""
         ...
 
+    def upsert(self, path_root: str, id: str, obj: Dict[str, Any]) -> Dict[str, Any]:
+        """Cria ou substitui um item preservando o id informado."""
+        ...
+
     def list(self, path_root: str) -> List[Dict[str, Any]]:
         """Lista todos os itens da coleção como [{"id": ..., ...}, ...]."""
         ...
