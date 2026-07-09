@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 const API = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
-const RTDB_FALLBACK = (import.meta.env.VITE_RTDB_URL || "https://poshbard-default-rtdb.firebaseio.com").replace(/\/$/, "");
 
 function normalizeMap(obj) {
   if (!obj) return [];
@@ -37,16 +36,11 @@ export default function Home() {
     let mounted = true;
     setLoadingAuthors(true);
     async function load() {
-      const candidates = [`${API}/autores_flat`, `${RTDB_FALLBACK}/autores_flat.json`];
       let data = null;
-      for (const url of candidates) {
-        try {
-          const r = await fetch(url);
-          if (!r.ok) continue;
-          data = await r.json();
-          break;
-        } catch (e) { /* try next */ }
-      }
+      try {
+        const r = await fetch(`${API}/autores_flat`);
+        if (r.ok) data = await r.json();
+      } catch (e) { /* sem dados */ }
       if (!mounted) return;
       if (!data) {
         setAuthors([]);
@@ -81,28 +75,6 @@ export default function Home() {
       if (r.ok) {
         const data = await r.json();
         setMetrics(data);
-        setLoadingMetrics(false);
-        return;
-      }
-      // fallback: tentar RTDB node do autor (autores_flat/<id>/works) e montar resumo mínimo
-      const fr = await fetch(`${RTDB_FALLBACK}/autores_flat/${author.id}.json`);
-      if (fr.ok) {
-        const node = await fr.json();
-        const works = node?.works || node?.work || {};
-        const arr = normalizeMap(works);
-        const sample = arr.slice(0, 6).map(w => ({ id: w.id, title: w.title || w.titulo || w.name, year: w.year || w.ano }));
-        setMetrics({
-          author_id: author.id,
-          name: author.name,
-          publications_count: arr.length,
-          total_citations: null,
-          h_index: null,
-          first_year: arr.length ? Math.min(...arr.map(x => Number(x.year || x.ano || 0)).filter(y => y)) : null,
-          last_year: arr.length ? Math.max(...arr.map(x => Number(x.year || x.ano || 0)).filter(y => y)) : null,
-          top_concepts: [],
-          top_coauthors: [],
-          sample_publications: sample,
-        });
         setLoadingMetrics(false);
         return;
       }

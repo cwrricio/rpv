@@ -27,7 +27,7 @@ APIs Externas ──► Ingestão ──► Banco (Firebase) ──► API REST 
 | Banco de dados | Firebase Realtime Database |
 | Frontend | React 19 + Vite + React Router |
 | Gráficos | Chart.js / Recharts |
-| Autenticação | Firebase Auth (stub; infra preparada) |
+| Autenticação | Disabled por padrão; porta OIDC provider-agnostic preparada |
 | Hospedagem frontend | Firebase Hosting |
 | Hospedagem backend | Cloud Run (Google Cloud) |
 | Jobs agendados | Cloud Run Jobs + Cloud Scheduler |
@@ -151,6 +151,7 @@ npm run dev                     # http://localhost:5173
 | ADR 0001 | Migrar do Firebase RTDB para **Firestore** (melhor escala e suporte a async) |
 | ADR 0003 | Usar **Cloud Run** em vez de Firebase Functions (FastAPI precisa de processo contínuo) |
 | ADR 0005 | Handlers devem se tornar `async def` após migração para Firestore |
+| ADR 0006 | Definir autenticação independente de provedor, com OIDC/Keycloak se login real for aprovado |
 
 Os ADRs estão em `docs/adr/` e documentam o raciocínio por trás de cada escolha.
 
@@ -160,7 +161,7 @@ Os ADRs estão em `docs/adr/` e documentam o raciocínio por trás de cada escol
 
 ### Funcionalidade
 
-- [ ] **Autenticação real**: o frontend tem o stub do Firebase Auth; falta proteger as rotas da API com verificação de ID Token.
+- [ ] **Autenticação real**: confirmar requisitos de produto e, se necessario, ativar OIDC provider-agnostic (ex.: Keycloak) antes de proteger rotas da API.
 - [ ] **Painel de Qualis**: a página `/qualis` existe mas ainda não consome dados reais de classificação de veículos.
 - [ ] **Relatórios exportáveis**: gerar PDF/CSV dos relatórios de produção.
 - [ ] **Busca e filtros**: as listagens não têm paginação, busca textual nem filtros por período.

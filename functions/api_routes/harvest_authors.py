@@ -1,5 +1,5 @@
 # functions/api_routes/harvest_authors.py
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Header, HTTPException, status
 from typing import Dict, Any, List, Optional, Tuple
 import time, traceback
 
@@ -265,3 +265,46 @@ def harvest_batch(body: Dict[str, Any] = Body(
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(500, f"Falha no harvest_batch: {e}")
+
+
+@router.post(
+    "/batch/jobs",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Enfileirar harvester em lote para worker dedicado",
+)
+def enqueue_harvest_batch_job(
+    body: Dict[str, Any] = Body(
+        ...,
+        example={
+            "items": [
+                {"name": "Diego Luis Kreutz"},
+                {"name": "Gilleanes Thorwald Araujo Guedes", "prefer_orcid": "0000-0001-5457-2600"},
+            ],
+            "max_works_pages": 3,
+            "s2_limit": 5,
+            "crossref_rows": 100,
+            "also_merge_autores": True,
+        },
+    ),
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+):
+    items = body.get("items") or []
+    if not items:
+        raise HTTPException(400, "Envie 'items': [{\"name\": \"...\"}, ...]")
+
+    from functions.jobs.queue import get_job_queue
+
+    queue = get_job_queue()
+    job = queue.enqueue(
+        "harvest.batch",
+        body,
+        max_attempts=int(body.get("max_attempts", 3)),
+        idempotency_key=idempotency_key,
+    )
+    return {
+        "ok": True,
+        "job_id": job["id"],
+        "status": job["status"],
+        "task_name": job["task_name"],
+        "idempotency_key": job.get("idempotency_key"),
+    }

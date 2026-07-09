@@ -2,81 +2,71 @@
 from typing import Optional, Dict, Any
 from fastapi import HTTPException
 import traceback
-from functions.common.dbref import ref
+
+from functions.repositories.ports import StoragePort
+from functions.adapters import get_storage
+
 
 class BaseCRUD:
     # Defina nas subclasses: path_root = "nome_do_no"
     path_root: Optional[str] = None
 
-    def __init__(self, path_root: Optional[str] = None):
+    def __init__(self, path_root: Optional[str] = None, storage: Optional[StoragePort] = None):
         if path_root:
             self.path_root = path_root
         if not self.path_root:
             raise RuntimeError(f"{self.__class__.__name__}: 'path_root' não definido")
+        # Injeção de dependência: default = adaptador ativo (Firebase hoje).
+        # Permite injetar um StoragePort fake em testes ou trocar por Postgres.
+        self.storage: StoragePort = storage or get_storage()
 
-    # referência raiz do nó
     def ref(self):
-        return ref(self.path_root)
+        """Escape hatch para consultas ainda não portadas ao StoragePort.
+
+        Só funciona com adaptadores que expõem `raw_ref` (Firebase). Mantido
+        por compatibilidade com queries específicas do RTDB (ex.: DocenteCRUD.
+        find_by_orcid). Cada chamada é dívida de migração a ser eliminada.
+        """
+        raw = getattr(self.storage, "raw_ref", None)
+        if raw is None:
+            raise NotImplementedError(
+                f"O backend ativo não suporta queries diretas em '{self.path_root}'. "
+                "Porte esta consulta para o StoragePort."
+            )
+        return raw(self.path_root)
 
     # --------- operações ---------
     def create(self, obj: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            key = self.ref().push().key
-            self.ref().child(key).set(obj)
-            return {"id": key, **obj}
+            return self.storage.create(self.path_root, obj)
         except Exception as e:
             traceback.print_exc()
             raise HTTPException(500, f"Erro ao criar: {e}")
 
     def list(self):
         try:
-            data = self.ref().get() or {}
-            if isinstance(data, dict):
-                out = []
-                for k, v in data.items():
-                    if isinstance(v, dict):
-                        out.append({"id": k, **v})
-                    else:
-                        out.append({"id": k, "value": v})
-                return out
-            if isinstance(data, list):
-                # raríssimo no RTDB para coleções, mas suportado
-                return [{"id": str(i), **(v if isinstance(v, dict) else {"value": v})}
-                        for i, v in enumerate(data)]
-            return []
+            return self.storage.list(self.path_root)
         except Exception as e:
             traceback.print_exc()
             raise HTTPException(500, f"Erro ao listar: {e}")
 
     def get(self, id: str) -> Optional[Dict[str, Any]]:
         try:
-            v = self.ref().child(id).get()
-            if v is None:
-                return None
-            return {"id": id, **v} if isinstance(v, dict) else {"id": id, "value": v}
+            return self.storage.get(self.path_root, id)
         except Exception as e:
             traceback.print_exc()
             raise HTTPException(500, f"Erro ao obter {id}: {e}")
 
     def update(self, id: str, patch: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         try:
-            node = self.ref().child(id)
-            if node.get() is None:
-                return None
-            node.update(patch)
-            v = node.get() or {}
-            return {"id": id, **v} if isinstance(v, dict) else {"id": id, "value": v}
+            return self.storage.update(self.path_root, id, patch)
         except Exception as e:
             traceback.print_exc()
             raise HTTPException(500, f"Erro ao atualizar {id}: {e}")
 
     def delete(self, id: str) -> bool:
         try:
-            node = self.ref().child(id)
-            if node.get() is None:
-                return False
-            node.delete()
-            return True
+            return self.storage.delete(self.path_root, id)
         except Exception as e:
             traceback.print_exc()
             raise HTTPException(500, f"Erro ao remover {id}: {e}")

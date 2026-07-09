@@ -1,11 +1,11 @@
 from typing import Optional, List, Dict
-from firebase_admin import db
+from functions.common.dbref import ref
 from functions.domain.types import StatusPesquisa, TipoDocente
 
 class PesquisaService:
     def __init__(self):
-        self.pesquisas = db.reference("pesquisas")
-        self.docentes = db.reference("docentes")
+        self.pesquisas = ref("pesquisas")
+        self.docentes = ref("docentes")
 
     def _get(self, ref, key: str) -> Dict | None:
         snap = ref.child(key).get()

@@ -198,11 +198,6 @@ function RelatorioContent() {
     /\/$/,
     ""
   );
-  const RTDB_FALLBACK = (
-    import.meta.env.VITE_RTDB_URL ||
-    "https://poshboard-default-rtdb.firebaseio.com"
-  ).replace(/\/$/, "");
-
   // Carrega autores e produções (assinatura para os eventos/observable data sources)
   useEffect(() => {
     let mounted = true;
@@ -221,15 +216,6 @@ function RelatorioContent() {
             : Object.keys(json || {})
                 .filter((k) => k !== "_")
                 .map((k) => ({ id: k, ...json[k] }));
-        } else {
-          // Fallback para RTDB
-          const fallbackRes = await fetch(`${RTDB_FALLBACK}/autores_flat.json`);
-          if (fallbackRes.ok) {
-            const json = await fallbackRes.json();
-            autoresData = Object.keys(json || {})
-              .filter((k) => k !== "_")
-              .map((k) => ({ id: k, ...json[k] }));
-          }
         }
 
         // Extrair produções dos autores
@@ -322,7 +308,7 @@ function RelatorioContent() {
     return () => {
       mounted = false;
     };
-  }, [API, RTDB_FALLBACK]);
+  }, [API]);
 
   // Listas para os filtros (derivadas do estado central - observable)
   const areas = useMemo(() => {

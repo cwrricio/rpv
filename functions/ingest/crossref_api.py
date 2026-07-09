@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, Query, Body
 from typing import Dict, Any, List
-import requests, time
+import time
 
 from config.settings import settings
 from functions.common.dbref import ref
+from functions.common import http_client
 
 router = APIRouter(prefix="/ingest/crossref", tags=["Crossref"])
 
@@ -19,12 +20,15 @@ def _headers() -> Dict[str, str]:
     return h
 
 def crossref_works_by_author(name: str, rows: int = 100) -> Dict[str, Any]:
-    url = "https://api.crossref.org/works"
-    params = {"query.author": name, "rows": rows}
-    r = requests.get(url, params=params, headers=_headers(), timeout=25)
-    if not (200 <= r.status_code < 300):
-        raise HTTPException(502, f"Crossref {r.status_code}: {r.text[:300]}")
-    return r.json()
+    try:
+        return http_client.get(
+            "https://api.crossref.org/works",
+            params={"query.author": name, "rows": rows},
+            headers=_headers(),
+            timeout=25,
+        )
+    except Exception as exc:
+        raise HTTPException(502, f"Crossref error: {exc}") from exc
 
 @router.post("/works_by_author_name", summary="Baixar obras no Crossref por nome de autor e salvar em /external/crossref")
 def works_by_author_name(body: Dict[str, Any] = Body(..., example={"name": "Diego Luis Kreutz", "rows": 100})):

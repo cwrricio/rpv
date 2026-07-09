@@ -17,7 +17,8 @@ import uuid
 
 import pytest
 
-import functions.repositories.base as base_module
+import functions.adapters.firebase_adapter as fb_adapter
+from functions.adapters.firebase_adapter import FirebaseRTDBAdapter
 from functions.repositories.base import BaseCRUD
 
 
@@ -85,13 +86,13 @@ class FakeDB:
 def crud(monkeypatch):
     """BaseCRUD apontando para um RTDB fake isolado por teste.
 
-    Após a Frente 2.4, BaseCRUD.ref() delega para functions.common.dbref.ref(path)
-    (acesso ao banco centralizado), importado como nome `ref` em base.py. Basta
-    substituir esse nome no módulo para isolar do Firebase.
+    Após a migração SSQM (Pessoa 1), BaseCRUD delega a um StoragePort injetado.
+    Aqui montamos o FirebaseRTDBAdapter com o `ref` substituído pelo FakeDB e o
+    injetamos no BaseCRUD — exercitando o adapter e a delegação de uma só vez.
     """
     fake_db = FakeDB()
-    monkeypatch.setattr(base_module, "ref", lambda path: fake_db.reference(path))
-    return BaseCRUD("docentes")
+    monkeypatch.setattr(fb_adapter, "ref", lambda path: fake_db.reference(path))
+    return BaseCRUD("docentes", storage=FirebaseRTDBAdapter())
 
 
 # --------------------------------------------------------------------------- #
@@ -180,11 +181,11 @@ def test_base_crud_contra_emulador():
     try:
         path_root = f"test_docentes_{uuid.uuid4().hex[:8]}"
 
-        class _EmuCRUD(BaseCRUD):
-            def ref(self):
+        class _EmuAdapter(FirebaseRTDBAdapter):
+            def _ref(self, _path_root):
                 return db.reference(path_root, app=app)
 
-        crud = _EmuCRUD(path_root)
+        crud = BaseCRUD(path_root, storage=_EmuAdapter())
 
         created = crud.create({"nome": "Maria", "tipo": "PERMANENTE"})
         assert crud.get(created["id"])["nome"] == "Maria"
